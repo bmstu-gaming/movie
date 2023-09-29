@@ -7,6 +7,7 @@ import os
 import subprocess
 import pysubs2
 import chardet
+import re
 
 logging.basicConfig()
 LOG = logging.getLogger(__name__)
@@ -35,25 +36,35 @@ class Movie(object):
                 LOG.error(f'the configuration file is set incorrectly: {str(e)}')
                 return False
 
-        LOG.debug(f'{self.base_template = }')
+        LOG.debug(f'{self.movies_path = }')
         if os.path.isdir(self.movies_path):
             LOG.info(f'MOVIES_PATH: \"{self.movies_path}\" {CHECK}')
         else:
             LOG.error(f'MOVIES_PATH: \"{self.movies_path}\" {CROSS}')
             status = False
 
+        LOG.debug(f'{self.ffmpeg = }')
         cmd_exec = [self.ffmpeg, '-h']
         try:
             stdout = subprocess.run(cmd_exec, capture_output=True, text=True)
         except Exception as e:
             LOG.error(f'\"{self.ffmpeg}\" not valid: {str(e)}')
-            return False
+            status = False
 
         LOG.info(f'FFMPEG: \"{self.ffmpeg}\" {CHECK}')
         LOG.debug(f"{ stdout.args = }")
         LOG.debug(f"{ stdout.returncode = }")
         LOG.debug(f"{ stdout.stderr = }")
         LOG.debug(f"{ stdout.stdout = }")
+
+        LOG.debug(f'{self.base_template = }')
+        if re.match(r"^[^\/\\\:\*\?\"\<\>\|]+$", self.base_template) is not None:
+            LOG.info(f'BASE_TEMPLATE: \"{self.base_template}\" {CHECK}')
+        else:
+            LOG.error(f'BASE_TEMPLATE: \"{self.base_template}\" {CROSS}')
+            self.base_template = BASE_TEMPLATE
+            status = False
+
         return status
 
     # get_info
@@ -321,11 +332,11 @@ class Movie(object):
 
 def run():
     movie = Movie()
-    if not movie.config_verification():
+    if movie.config_verification():
+        print(f'config.json {CHECK}')
+    else:
         print(f'config.json {CROSS}')
         return
-    else:
-        print(f'config.json {CHECK}')
 
     movie.get_info()
     movie.save_necessary_metadata(streams=["0", "1"])
