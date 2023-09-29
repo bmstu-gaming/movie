@@ -5,15 +5,17 @@ import logging
 import os
 import subprocess
 import pysubs2
+import chardet
 
 logging.basicConfig()
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO) # DEBUG INFO ERROR CRITICAL
 
 FFMPEG = "F:\\Program Files\\Jellyfin\\Server\\FFMPEG.exe"
-MOVIES_PATH = "E:\\Program Data\\Videos\\Movies\\Gundam.0083.Stardust.Memory"
-BASE_TEMPLATE = "Gundam.0083.Stardust.Memory.E"
+MOVIES_PATH = ""
+BASE_TEMPLATE = ""
 
+# get_info
 def get_info(movies_path):
     for _, f in enumerate(os.listdir(movies_path), start=1):
         _, file_extension = os.path.splitext(f)
@@ -153,11 +155,16 @@ def subs_convert_srt_to_ass(movies_path):
     for _, f in enumerate(os.listdir(movies_path), start=1):
         filename, file_extension = os.path.splitext(f)
         if file_extension == ".srt":
-            LOG.INFO(f"{filename = }")
+            
             sub_path_source = os.path.join(movies_path, f)
-            subs = pysubs2.load(sub_path_source)
+            LOG.info(f"{filename} -> .ass")
+
+            with open(sub_path_source, 'rb') as f:
+                result = chardet.detect(f.read())
+
+            subs = pysubs2.load(sub_path_source, encoding=result["encoding"])
             sub_path_target = os.path.join(movies_path, f'{filename}.ass')
-            subs.save(sub_path_target)
+            subs.save(sub_path_target, encoding="utf-8")
 
 # __get_max_occur_styles__
 def __get_max_occur_styles__(movies_path, f, max_styles=5, log_info=False):
@@ -272,30 +279,20 @@ def dialogue_subs_ass(movies_path, max_styles, do):
 
 if __name__ == "__main__":
     get_info(MOVIES_PATH)
-
-    # save_necessary_metadata(MOVIES_PATH, streams=["0", "2"])
-
-    # remove_video(MOVIES_PATH, save_template="pure", do_remove=True)
-
-    # get_info(MOVIES_PATH)
-
-    # # make_default_subs(MOVIES_PATH, languages=["ja"], streams=[1])
+    save_necessary_metadata(MOVIES_PATH, streams=["0", "1"])
+    remove_video(MOVIES_PATH, save_template="pure", do_remove=True)
+    get_info(MOVIES_PATH)
+    make_default_subs(MOVIES_PATH, languages=["ja"], streams=[1])
     # make_default_subs(MOVIES_PATH, languages=["ja", "rus"], streams=[1, 2])
-
-    # remove_video(MOVIES_PATH, save_template="default_rus_subs", do_remove=True)
-
-    # subs_convert_srt_to_ass(MOVIES_PATH)
-
-    # get_sub_info(movies_path=MOVIES_PATH)
-
-    # dialogue_subs_ass(movies_path=MOVIES_PATH, max_styles=1, do=True)
-
-    # rename_files(movies_path=MOVIES_PATH, filename_template=BASE_TEMPLATE, do_rename=True)
-
+    remove_video(MOVIES_PATH, save_template="default_rus_subs", do_remove=True)
+    subs_convert_srt_to_ass(MOVIES_PATH)
+    get_sub_info(movies_path=MOVIES_PATH)
+    dialogue_subs_ass(movies_path=MOVIES_PATH, max_styles=3, do=True)
+    rename_files(movies_path=MOVIES_PATH, filename_template=BASE_TEMPLATE, do_rename=True)
 
 # test_function
 def test_function():
-    movies_path = "E:\Program Data\Videos\Movies\TV-3"
+    movies_path = ""
 
     streams = [1, 2]
     languages = ["ja", "rus"]

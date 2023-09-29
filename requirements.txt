@@ -1,3 +1,4 @@
 datetime
 logging
 pysubs2===1.6.1
+chardet===5.2.0
