@@ -1,5 +1,5 @@
 {
-	"FFMPEG": "F:\\Program Files\\Jellyfin\\Server\\FFMPEG.exe",
-	"MOVIES_PATH": "E:\\Program Data\\Videos\\Movies\\Black.Lagoon",
-	"BASE_TEMPLATE": "Black.Lagoon"
+	"FFMPEG": "",
+	"MOVIES_PATH": "",
+	"BASE_TEMPLATE": "Movie"
 }
