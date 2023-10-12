@@ -397,8 +397,29 @@ class Movie(object):
                 first_subtitle = f
                 LOG.debug(f"{ first_subtitle = }")
                 self.__get_max_occur_styles__(file=f, log_info=True)
-                break
+                return
         LOG.info(' There is no .ass subtitles in folder ')
+
+
+    # extract_subtitle
+    def extract_subtitle(self):
+        for _, f in enumerate(os.listdir(self.movies_path), start=1):
+            filename, file_extension = os.path.splitext(f)
+            if file_extension == ".mkv":
+                video_path_source = os.path.join(self.movies_path, f)
+                subtitle_path_result = os.path.join(self.movies_path, filename+".srt")
+                LOG.debug(f"{ video_path_source = }")
+                LOG.info(f"{ subtitle_path_result = }")
+                cmd_exec = [self.ffmpeg,
+                            '-i', video_path_source,
+                            '-map', '0:s:0',
+                            subtitle_path_result]
+                LOG.debug(f"{ cmd_exec = }")
+                stdout = subprocess.run(cmd_exec, capture_output=True, text=True)
+                LOG.debug(f"{ stdout.args = }")
+                LOG.debug(f"{ stdout.returncode = }")
+                LOG.debug(f"{ stdout.stderr = }")
+                LOG.debug(f"{ stdout.stdout = }")
 
 
     # change_subs_styles_ass
@@ -490,6 +511,7 @@ def run():
     # movie.remove_video(do_remove=False)
 
     # movie.get_sub_info()
+    # movie.extract_subtitle()
     # movie.subs_convert_srt_to_ass()
     # movie.change_subs_styles_ass(max_styles=3, do_change=True)
 
