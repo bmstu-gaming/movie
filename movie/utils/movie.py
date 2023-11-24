@@ -111,7 +111,6 @@ class Movie(object):
         cmd_exec = [self.ffmpeg, '-i', video_path_source]
         stdout = self.__command_execution__(command=cmd_exec)
         log_data = stdout.stderr
-        LOG.debug(f'{ log_data = }')
 
         logs_folder = "logs"
         isExist = os.path.exists(logs_folder)
@@ -136,9 +135,12 @@ class Movie(object):
             }
             for stream, stream_lang, stream_type in stream_pattern.findall(log_data)
         ]
+        for stream in streams:
+            stream['language'] = stream['language'][1:-1]
+            LOG.debug(f'{ stream = }')
 
         stream_title_pattern = re.compile(constants.TITLE_STREAMS)
-        streams_title = [
+        extended_streams = [
             {
                 'stream': int(stream),
                 'language': stream_lang,
@@ -147,20 +149,17 @@ class Movie(object):
             }
             for stream, stream_lang, stream_type, stream_title in stream_title_pattern.findall(log_data)
         ]
-        for stream_title in streams_title:
-            LOG.debug(f'{ stream_title = }')
+        for extended_stream in extended_streams:
+            LOG.debug(f'{ extended_stream = }')       
 
-        for stream in streams:
-            stream['language'] = stream['language'][1:-1]
-            LOG.debug(f'{ stream = }')
-        LOG.debug(f'{ streams = }')
         media_streams = [stream for stream in streams if stream['type'] != 'Attachment']
-        LOG.debug(f'{ media_streams = }')
+        for media_stream in media_streams:
+            LOG.debug(f'{ media_stream = }')
 
         for idx in range(len(media_streams)):
-            for st in streams_title:
-                if ('stream', idx) in st.items():
-                    media_streams[idx]['title'] = st['title']
+            for extended_stream in extended_streams:
+                if ('stream', idx) in extended_stream.items():
+                    media_streams[idx]['title'] = extended_stream['title']
 
         for media_stream in media_streams:
             LOG.info(f'{ media_stream = }')
