@@ -32,4 +32,6 @@ def run():
     # movie_obj.subs_convert_srt_to_ass()
     # movie_obj.change_subs_styles_ass(max_styles=1)
 
+    # movie_obj.preview_generate()
+
     # movie_obj.rename_files(do_rename=True)
