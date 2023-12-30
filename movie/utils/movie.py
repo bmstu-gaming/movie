@@ -6,6 +6,7 @@ import logging
 import json
 import os
 import subprocess
+from PIL import Image, ImageDraw, ImageFont
 import pysubs2
 import chardet
 import random
@@ -486,3 +487,131 @@ class Movie(object):
             result = chardet.detect(f.read())
         f.close()
         return result["encoding"]
+
+
+    def __get_resized_preview_image__(self, image):
+        f_name, f_ext = os.path.splitext(image)
+
+        img_path = os.path.join(self.movies_path, image)
+        img = Image.open(img_path)
+
+        original_width, original_height = img.size
+        LOG.debug(f' source: {original_height}x{original_width}')
+
+        target_width = 380
+        target_heigth = int(original_height * (target_width / original_width))
+        LOG.debug(f' target: {target_heigth}x{target_width}')
+
+        resized_img = img.resize((target_width, target_heigth))
+        img_resized_filename = f'{f_name}.resized{f_ext}'
+
+        img_resized_path = os.path.join(self.movies_path, img_resized_filename)
+        resized_img.save(img_resized_path)
+
+        img.close()
+        LOG.info(f' removing: {img_path}')
+        os.remove(img_path)
+
+        return img_resized_filename
+
+
+    def __get_background_image__(self):
+        img_bg = Image.new('RGB', (400, 600), color=(16, 16, 16))
+        img_bg_filename = 'bg.jpg'
+        img_bg_file_source = os.path.join(self.movies_path, img_bg_filename)
+        img_bg.save(img_bg_file_source)
+        return img_bg_filename
+
+
+    def __get_preview_with_background__(self, preview_image, background_image):
+        preview_image_path = os.path.join(self.movies_path, preview_image)
+        img_preview = Image.open(preview_image_path)
+        preview_width, preview_height = img_preview.size
+
+        bg_image_path = os.path.join(self.movies_path, background_image)
+        img_bg = Image.open(bg_image_path)
+        bg_width, bg_height = img_bg.size
+
+        center_x = bg_width // 2 - preview_width // 2
+        center_y = bg_height // 2 - preview_height // 2
+
+        result = Image.new('RGB', (bg_width, bg_height), color=(0, 0, 0))
+        result.paste(img_bg, (0, 0))
+        result.paste(img_preview, (center_x, center_y))
+
+        f_name, f_ext = os.path.splitext(preview_image)
+        img_preview_filename = f'{f_name}.preview{f_ext}'
+        img_preview_path = os.path.join(self.movies_path, img_preview_filename)
+        result.save(img_preview_path)
+
+        img_preview.close()
+        img_bg.close()
+        LOG.info(f' removing: {preview_image_path}')
+        os.remove(preview_image_path)
+        LOG.info(f' removing: {bg_image_path}')
+        os.remove(bg_image_path)
+
+        return img_preview_filename
+
+
+    def __copy_preview_image__(self, image):
+        f_name, f_ext = os.path.splitext(image)
+
+        img_path = os.path.join(self.movies_path, image)
+        image = Image.open(img_path)
+
+        video_count = 12
+        for i in range(1, video_count+1):
+            template = f_name + ".copy.{idx:02d}" + f_ext
+            copy_filename = template.format(idx=i)
+            LOG.debug(f'{ copy_filename = }')
+            copy_path = os.path.join(self.movies_path, copy_filename)
+            image.save(copy_path)
+        image.close()
+        LOG.info(f' removing: {img_path}')
+        os.remove(img_path)
+
+
+    def __write_number__(self, image, number):
+        f_name, f_ext = os.path.splitext(image)
+
+        img_path = os.path.join(self.movies_path, image)
+        img = Image.open(img_path)
+        draw = ImageDraw.Draw(img)
+        font = ImageFont.truetype('impact.ttf', size=50)
+        draw.text((0, 0), str(number), fill='yellow', font=font)
+        
+        img_target_filename = f'{f_name}-{number}{f_ext}'
+        img_target_path = os.path.join(self.movies_path, img_target_filename)
+        img.save(img_target_path)
+
+        img.close
+        LOG.info(f' removing: {img_path}')
+        os.remove(img_path)
+
+
+    def preview_generate(self):
+        for _, f in enumerate(os.listdir(self.movies_path), start=1):
+            _, f_ext = os.path.splitext(f)
+            if f_ext == ".png" or f_ext == ".jpg":
+                LOG.info(f'{ f = }')
+                img_file_resized = self.__get_resized_preview_image__(f)
+                LOG.debug(f'{ img_file_resized = }')
+                img_bg_file = self.__get_background_image__()
+                LOG.debug(f'{ img_bg_file = }')
+                img_preview = self.__get_preview_with_background__(img_file_resized, img_bg_file)
+                LOG.debug(f'{ img_preview = }')
+                self.__copy_preview_image__(img_preview)
+
+        if self.__is_series__() == 1:
+            # for one video (film) there is no need to indicate the number
+            return
+
+        preview_idx = 1
+        for _, f in enumerate(os.listdir(self.movies_path), start=1):
+            _, f_ext = os.path.splitext(f)
+            if f_ext == ".png" or f_ext == ".jpg":
+                LOG.debug(f'{ preview_idx = }')
+                LOG.info(f'{ f = }')
+                self.__write_number__(f, preview_idx)
+                preview_idx += 1
