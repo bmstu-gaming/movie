@@ -20,13 +20,11 @@ LOG.setLevel(logging.DEBUG)  # DEBUG INFO ERROR CRITICAL
 
 
 class Movie(object):
-    # __init__
     def __init__(self):
         self.__filename_prefix_generator__()
         pass
 
 
-    # __verification_movies_path__
     def __verification_movies_path__(self):
         LOG.debug(f'{self.movies_path = }')
         if os.path.isdir(self.movies_path):
@@ -37,7 +35,6 @@ class Movie(object):
             return False
 
 
-    # __verification_ffmpeg__
     def __verification_ffmpeg__(self):
         LOG.debug(f'{self.ffmpeg = }')
         cmd_exec = [self.ffmpeg, '-version']
@@ -59,7 +56,6 @@ class Movie(object):
         return True
 
 
-    # __verification_base_template__
     def __verification_base_template__(self):
         LOG.debug(f'{self.base_template = }')
         if re.match(r"^[^\/\\\:\*\?\"\<\>\|]+$", self.base_template) is not None:
@@ -70,7 +66,6 @@ class Movie(object):
             return False
 
 
-    # config_verification
     def config_verification(self):
         status = True
         with open('config.json') as config_json_file:
@@ -82,33 +77,20 @@ class Movie(object):
             except Exception as e:
                 LOG.error(f'the configuration file is set incorrectly: {str(e)}')
                 return False
-        status = self.__verification_movies_path__()
         status = self.__verification_ffmpeg__()
+        status = self.__verification_movies_path__()
         status = self.__verification_base_template__()
 
         return status
 
 
-    # get_streams_and_log_file
-    def get_streams_and_log_file(self):
-        for _, f in enumerate(os.listdir(self.movies_path), start=1):
-            _, file_extension = os.path.splitext(f)
-            if file_extension == ".mkv":
-                self.streams_pattern = constants.MKV_STREAMS
-                first_video = f
-                break
-            if file_extension == ".mp4":
-                self.streams_pattern = constants.MP4_STREAMS
-                first_video = f
-                break
-
-        LOG.debug(f'{ first_video = }')
-        video_path_source = os.path.join(self.movies_path, first_video)
-        LOG.info(f'{ video_path_source = }')
+    def __get_video_streams_and_log_file__(self, video):
+        vid_path_source = os.path.join(self.movies_path, video)
+        LOG.debug(f'{ vid_path_source = }')
         dt_string = datetime.now().strftime('%Y.%m.%d - %H.%M.%S')
         LOG.debug(f'{ dt_string = }')
 
-        cmd_exec = [self.ffmpeg, '-i', video_path_source]
+        cmd_exec = [self.ffmpeg, '-i', vid_path_source]
         stdout = self.__command_execution__(command=cmd_exec)
         log_data = stdout.stderr
 
@@ -117,14 +99,14 @@ class Movie(object):
         if not isExist:
             os.makedirs(logs_folder)
 
-        log_file = f'{dt_string}-{first_video}.log'
+        log_file = f'{dt_string}-{video}.log'
         log_stderr = stdout.stderr.split('\n')
-        log_path = os.path.join(logs_folder, log_file)
+        log_path_target = os.path.join(logs_folder, log_file)
 
-        with open(log_path, "w", encoding='utf-8') as fp:
+        with open(log_path_target, "w", encoding='utf-8') as fp:
             for item in log_stderr:
                 fp.write("%s\n" % item)
-        LOG.info(f' info in: {log_path}')
+        LOG.info(f' info in: {log_path_target}')
 
         stream_pattern = re.compile(self.streams_pattern)
         streams = [
@@ -166,7 +148,23 @@ class Movie(object):
         self.streams = media_streams
 
 
-    # remove_video
+    def __get_first_video_in_directory__(self):
+        for _, f in enumerate(os.listdir(self.movies_path), start=1):
+            _, file_extension = os.path.splitext(f)
+            if file_extension == ".mkv":
+                self.streams_pattern = constants.MKV_STREAMS
+                return f
+            if file_extension == ".mp4":
+                self.streams_pattern = constants.MP4_STREAMS
+                return f
+
+
+    def get_streams_and_log_file(self):
+        first_video = self.__get_first_video_in_directory__()
+        LOG.debug(f'{ first_video = }')
+        self.__get_video_streams_and_log_file__(video=first_video)
+
+
     def remove_video(self, do_remove: bool):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
@@ -175,18 +173,16 @@ class Movie(object):
                     LOG.debug(f'     {self.filename_prefix} video: {f}')
                 else:
                     LOG.debug(f' non {self.filename_prefix} video: {f}')
-                    non_template_video_path = os.path.join(self.movies_path, f)
-                    LOG.info(f' removing: {non_template_video_path}')
+                    vid_non_template_path = os.path.join(self.movies_path, f)
+                    LOG.info(f' removing: {vid_non_template_path}')
                     if do_remove:
-                        os.remove(non_template_video_path)
+                        os.remove(vid_non_template_path)
 
 
-    # __filename_prefix_generator__
     def __filename_prefix_generator__(self, size=10, chars=string.ascii_uppercase + string.digits):
         self.filename_prefix = "".join(random.choice(chars) for _ in range(size))
 
 
-    # __get_first_subtitle_type_stream__
     def __get_first_subtitle_type_stream__(self, selected_streams: list[str]):
         for i in range(len(selected_streams)):
             for stream in self.streams:
@@ -196,17 +192,16 @@ class Movie(object):
                         return stream['stream']
 
 
-    # selected_streams
     def selected_streams(self, selected_streams: list[str]):
-        default_sub_stream = self.__get_first_subtitle_type_stream__(selected_streams)
-        LOG.debug(f'{ default_sub_stream = }')
+        sub_default_stream = self.__get_first_subtitle_type_stream__(selected_streams)
+        LOG.debug(f'{ sub_default_stream = }')
 
         streams_metadata = []
         for i, selected_stream in enumerate(selected_streams):
             for stream in self.streams:
                 if ('stream', selected_stream) in stream.items():
                     LOG.debug(f'{ stream = }')
-                    if selected_stream == default_sub_stream:
+                    if selected_stream == sub_default_stream:
                         stream_metadata = [
                             '-map', f'0:{stream["stream"]}',
                             f'-disposition:{i}', 'default',
@@ -219,11 +214,9 @@ class Movie(object):
                     for elem in stream_metadata:
                         streams_metadata.append(elem)
         LOG.debug(f'{ streams_metadata = }')
-
         self.__run_ffmpeg__(streams_metadata)
 
 
-    # set_default_and_language_streams
     def set_default_and_language_streams(self, streams_languages: dict):
         streams_metadata = []
         for i, key in enumerate(streams_languages):
@@ -244,29 +237,27 @@ class Movie(object):
         self.__run_ffmpeg__(streams_metadata)
 
 
-    # __run_ffmpeg__
     def __run_ffmpeg__(self, streams: list[str]):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
             if file_extension == ".mkv":
-                video_path_source = os.path.join(self.movies_path, f)
-                video_path_result = os.path.join(self.movies_path, f'{self.filename_prefix}-{f}')
+                vid_path_source = os.path.join(self.movies_path, f)
+                vid_path_target = os.path.join(self.movies_path, f'{self.filename_prefix}-{f}')
 
-                LOG.info(f'{ video_path_source = }')
-                LOG.debug(f'{ video_path_result = }')
+                LOG.info(f'{ vid_path_source = }')
+                LOG.debug(f'{ vid_path_target = }')
 
                 cmd_exec = [
                     self.ffmpeg,
-                    '-i', video_path_source,
+                    '-i', vid_path_source,
                     '-c', 'copy',
                     *streams,
-                    video_path_result
+                    vid_path_target
                 ]
                 LOG.debug(f'{ cmd_exec = }')
                 self.__command_execution__(command=cmd_exec)
 
 
-    # __is_series__
     def __is_series__(self):
         video_count = 0
         for _, f in enumerate(os.listdir(self.movies_path)):
@@ -277,72 +268,69 @@ class Movie(object):
         return video_count
 
 
-    # __rename__
     def __rename__(self, file: str, template: str, idx: int, do_rename: bool):
         file_name, file_extension = os.path.splitext(file)
         new_file_name = template.format(episode_idx=idx)
         LOG.debug(f' old_file: {file_name}{file_extension}')
         LOG.info(f'  new_file: {new_file_name}{file_extension}')
-        old_file = os.path.join(self.movies_path, file)
-        new_file = os.path.join(self.movies_path, new_file_name + file_extension)
+        old_path = os.path.join(self.movies_path, file)
+        new_path = os.path.join(self.movies_path, new_file_name + file_extension)
         if do_rename:
-            os.rename(old_file, new_file)
+            os.rename(old_path, new_path)
 
 
-    # rename_files
     def rename_files(self, do_rename: bool):
         isSeries = True
         if self.__is_series__() == 1:
             isSeries = False
-            template_video = self.base_template
+            template_vid = self.base_template
             template_sub = self.base_template + ".RUS"
             template_img = self.base_template
         LOG.debug(f'{ isSeries = }')
 
         base_idx = 1
-        subtitle_idx = base_idx
-        video_idx = base_idx
-        picture_idx = base_idx
+        sub_idx = base_idx
+        vid_idx = base_idx
+        img_idx = base_idx
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
 
             if file_extension == ".mkv" or file_extension == ".mp4":
                 if isSeries:
-                    template_video = self.base_template + ".E{episode_idx:02d}"
+                    template_vid = self.base_template + ".E{episode_idx:02d}"
 
-                self.__rename__(file=f, template=template_video, idx=video_idx, do_rename=do_rename)
-                video_idx += 1
+                self.__rename__(file=f, template=template_vid, idx=vid_idx, do_rename=do_rename)
+                vid_idx += 1
 
             if file_extension == ".ass" or file_extension == ".srt":
                 if isSeries:
                     template_sub = self.base_template + ".E{episode_idx:02d}.RUS"
 
-                self.__rename__(file=f, template=template_sub, idx=subtitle_idx, do_rename=do_rename)
-                subtitle_idx += 1
+                self.__rename__(file=f, template=template_sub, idx=sub_idx, do_rename=do_rename)
+                sub_idx += 1
 
             if file_extension == ".png" or file_extension == ".jpg":
                 if isSeries:
                     template_img = self.base_template + ".E{episode_idx:02d}"
 
-                self.__rename__(file=f, template=template_img, idx=picture_idx, do_rename=do_rename)
-                picture_idx += 1
+                self.__rename__(file=f, template=template_img, idx=img_idx, do_rename=do_rename)
+                img_idx += 1
 
 
-    # subs_convert_srt_to_ass
     def subs_convert_srt_to_ass(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             filename, file_extension = os.path.splitext(f)
             if file_extension == ".srt":
-                LOG.info(f'{filename} -> .ass')
+                LOG.info(f' {filename} -> .ass ')
 
                 sub_path_source = os.path.join(self.movies_path, f)
                 sub_path_target = os.path.join(self.movies_path, f'{filename}.ass')
 
                 subs = pysubs2.load(sub_path_source, encoding=self.__get_file_encoding__(sub_path_source))
                 subs.save(sub_path_target, encoding='utf-8')
-                srt_subtitle = os.path.join(self.movies_path, filename + file_extension)
-                LOG.debug(f' removing: {srt_subtitle}')
-                os.remove(srt_subtitle)
+                sub_file_srt = os.path.join(self.movies_path, filename + file_extension)
+                LOG.debug(f' removing: {sub_file_srt}')
+                os.remove(sub_file_srt)
 
 
     def __get_styles__(self, file: str) -> dict:
@@ -350,7 +338,7 @@ class Movie(object):
         sub_styles = []
         style_regex = re.compile(constants.STYLE_SUB)
         with codecs.open(sub_path_source, "r", encoding=self.__get_file_encoding__(sub_path_source)) as file_sub:
-            LOG.info(f' Sub: {sub_path_source}')
+            LOG.info(f' Sub: {file}')
             for line in file_sub:
                 if style_regex.match(line):
                     style_setting = line[7:].split(",")
@@ -375,14 +363,12 @@ class Movie(object):
         return sorted_style_occurrences
 
 
-    # __get_max_occurrences_styles__
     def __get_max_occurrences_styles__(self, dict_styles: dict, max_styles=3) -> list[str]:
         styles_with_max_occurrences = heapq.nlargest(max_styles, dict_styles, key=dict_styles.get)
         LOG.debug(f'{ styles_with_max_occurrences = }')
         return styles_with_max_occurrences
 
 
-    # get_sub_info
     def get_sub_info(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
@@ -391,28 +377,26 @@ class Movie(object):
                 LOG.debug(f'{ first_subtitle = }')
                 self._style_occurrences = self.__get_styles__(file=f)
                 return
-        LOG.info('There is no .ass subtitles in folder ')
+        LOG.info(' There is no .ass subtitles in folder ')
 
 
-    # extract_subtitle
     def extract_subtitle(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             filename, file_extension = os.path.splitext(f)
             if file_extension == ".mkv":
-                video_path_source = os.path.join(self.movies_path, f)
-                subtitle_path_result = os.path.join(self.movies_path, filename + ".srt")
-                LOG.debug(f'{ video_path_source = }')
-                LOG.info(f'{ subtitle_path_result = }')
+                vid_path_source = os.path.join(self.movies_path, f)
+                sub_path_target = os.path.join(self.movies_path, filename + ".srt")
+                LOG.debug(f'{ vid_path_source = }')
+                LOG.info(f'{ sub_path_target = }')
                 cmd_exec = [
                     self.ffmpeg,
-                    '-i', video_path_source,
+                    '-i', vid_path_source,
                     '-map', '0:s:0',
-                    subtitle_path_result
+                    sub_path_target
                 ]
                 self.__command_execution__(command=cmd_exec)
 
 
-    # change_subs_styles_ass
     def change_subs_styles_ass(self, max_styles: int):
         """
         the subtitles that occur most times are considered the main subtitles of the dialogue
@@ -457,7 +441,7 @@ class Movie(object):
             StyleFormat.Shadow: "0",
         }
 
-        LOG.info("Sub template ")
+        LOG.info(' Sub template ')
         LOG.info([f'{k.name}: {dialogue_style[k]}' for k in dialogue_style])
 
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
@@ -476,7 +460,7 @@ class Movie(object):
                             if style_setting[0] in styles_with_max_occurrences:
                                 for key in dialogue_style:
                                     style_setting[key.value] = dialogue_style[key]
-                                line = "Style: " + ",".join(style_setting)
+                                line = constants.STYLE_SUB + ",".join(style_setting)
                                 LOG.debug(f'{line}')
                         new_sub_lines.append(line)
                 file_sub.close()
@@ -486,9 +470,8 @@ class Movie(object):
                 file_sub.close()
 
 
-    # __command_execution__
     def __command_execution__(self, command: list[str]) -> subprocess.CompletedProcess[str]:
-        LOG.debug("__command_execution__")
+        LOG.debug(' __command_execution__ ')
         LOG.debug(f'{ command = }')
         stdout = subprocess.run(command, capture_output=True, text=True, encoding="utf-8")
         LOG.debug(f'{ stdout.args = }')
