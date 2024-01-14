@@ -1,4 +1,6 @@
+import ass
 import codecs
+import collections
 from datetime import datetime
 from enum import Enum
 import heapq
@@ -560,8 +562,7 @@ class Movie(object):
         img_path = os.path.join(self.movies_path, image)
         image = Image.open(img_path)
 
-        video_count = 12
-        for i in range(1, video_count+1):
+        for i in range(1, self.__is_series__()+1):
             template = f_name + ".copy.{idx:02d}" + f_ext
             copy_filename = template.format(idx=i)
             LOG.debug(f'{ copy_filename = }')
@@ -580,7 +581,7 @@ class Movie(object):
         draw = ImageDraw.Draw(img)
         font = ImageFont.truetype('impact.ttf', size=50)
         draw.text((0, 0), str(number), fill='yellow', font=font)
-        
+
         img_target_filename = f'{f_name}-{number}{f_ext}'
         img_target_path = os.path.join(self.movies_path, img_target_filename)
         img.save(img_target_path)
@@ -615,3 +616,99 @@ class Movie(object):
                 LOG.info(f'{ f = }')
                 self.__write_number__(f, preview_idx)
                 preview_idx += 1
+    
+    def __subtitle_purification__(self, sub_path_source, sub_path_target):
+        with codecs.open(sub_path_source, mode="r", encoding=self.__get_file_encoding__(sub_path_source)) as sub_file_source:
+            doc = ass.parse(sub_file_source)
+
+            script_info_dict = {
+                'WrapStyle': '0',
+                'ScaledBorderAndShadow': 'yes',
+                'Collisions': 'Normal',
+                'ScriptType': 'v4.00+',
+            }
+            doc.info = ass.ScriptInfoSection('Script Info', collections.OrderedDict(script_info_dict))
+            LOG.debug(f'{ doc.info = }')
+
+            main_subtitle = ass.line.Style(
+                name='Main',
+                fontname='Arial',
+                fontsize=20.0,
+                primary_color=ass.data.Color(r=0xff, g=0xff, b=0xff, a=0x00),
+                secondary_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+                outline_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+                back_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+                bold=True,
+                italic=False,
+                underline=False,
+                strike_out=False,
+                scale_x=100.0,
+                scale_y=100.0,
+                spacing=0.0,
+                angle=0.0,
+                border_style=1,
+                outline=1.0,
+                shadow=0.0,
+                alignment=2,
+                margin_l=0,
+                margin_r=0,
+                margin_v=10,
+                encoding=0
+            )
+            signs_subtitle = ass.line.Style(
+                name='Signs',
+                fontname='Arial',
+                fontsize=14.0,
+                primary_color=ass.data.Color(r=0xff, g=0xff, b=0xff, a=0x00),
+                secondary_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+                outline_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+                back_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+                bold=False,
+                italic=False,
+                underline=False,
+                strike_out=False,
+                scale_x=100.0,
+                scale_y=100.0,
+                spacing=0.0,
+                angle=0.0,
+                border_style=1,
+                outline=1.0,
+                shadow=0.0,
+                alignment=8,
+                margin_l=0,
+                margin_r=0,
+                margin_v=10,
+                encoding=0
+            )
+            subs = [main_subtitle, signs_subtitle]
+            subs_name = ['Main', 'Signs']
+            doc.styles = ass.section.StylesSection('V4+ Styles', subs)
+            LOG.debug(f'{ doc.styles = }')
+
+            for event in doc.events:
+                clear_text = re.sub(r'{[^}]*}', '', event.text).strip()
+                event.text = clear_text
+                # mains = ['Main_Top', 'Main_Italic', 'Main_Top_Italic']
+                if re.match(r'^Main', string=event.style) or re.match(r'^Default', string=event.style):
+                    event.style = 'Main'
+                if event.style not in subs_name:
+                    event.style = 'Signs'
+
+            with open(sub_path_target, "w", encoding='utf_8_sig') as sub_file_target:
+                doc.dump_file(sub_file_target)
+            sub_file_target.close()
+        sub_file_source.close()
+
+        LOG.info(f' removing: {sub_path_source}')
+        os.remove(sub_path_source)
+
+
+    def ass_subtitle_purification(self):
+        for _, f in enumerate(os.listdir(self.movies_path), start=1):
+            f_name, f_ext = os.path.splitext(f)
+            if f_ext == ".ass":
+                sub_path_source = os.path.join(self.movies_path, f)
+                sub_path_target = os.path.join(self.movies_path, f'{f_name}.out{f_ext}')
+                LOG.debug(f'{ sub_path_source = }')
+                LOG.debug(f'{ sub_path_target = }')
+                self.__subtitle_purification__(sub_path_source, sub_path_target)
