@@ -30,7 +30,6 @@ def run():
     # movie_obj.get_sub_info()
     # movie_obj.extract_subtitle()
     # movie_obj.subs_convert_srt_to_ass()
-    # movie_obj.change_subs_styles_ass(max_styles=1)
     # movie_obj.ass_subtitle_purification()
 
     # movie_obj.preview_generate()
