@@ -11,9 +11,9 @@ LOG.setLevel(logging.INFO)  # DEBUG INFO ERROR CRITICAL
 def run():
     movie_obj = movie.Movie()
     if movie_obj.config_verification():
-        LOG.info(f"config.json {constants.CHECK}")
+        LOG.info(f' config.json {constants.CHECK}')
     else:
-        LOG.error(f"config.json {constants.CROSS}")
+        LOG.error(f' config.json {constants.CROSS}')
         return
 
     movie_obj.get_streams_and_log_file()
