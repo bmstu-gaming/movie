@@ -2,8 +2,6 @@ import ass
 import codecs
 import collections
 from datetime import datetime
-from enum import Enum
-import heapq
 import logging
 import json
 import os
@@ -28,7 +26,7 @@ class Movie(object):
         pass
 
 
-    def __verification_movies_path__(self):
+    def __verification_movies_path__(self) -> bool:
         LOG.debug(f'{self.movies_path = }')
         if os.path.isdir(self.movies_path):
             LOG.info(f'MOVIES_PATH: "{self.movies_path}" {constants.CHECK}')
@@ -38,7 +36,7 @@ class Movie(object):
             return False
 
 
-    def __verification_ffmpeg__(self):
+    def __verification_ffmpeg__(self) -> bool:
         LOG.debug(f'{self.ffmpeg = }')
         cmd_exec = [self.ffmpeg, '-version']
         try:
@@ -59,7 +57,7 @@ class Movie(object):
         return True
 
 
-    def __verification_base_template__(self):
+    def __verification_base_template__(self) -> bool:
         LOG.debug(f'{self.base_template = }')
         if re.match(r"^[^\/\\\:\*\?\"\<\>\|]+$", self.base_template) is not None:
             LOG.info(f'BASE_TEMPLATE: "{self.base_template}" {constants.CHECK}')
@@ -69,7 +67,7 @@ class Movie(object):
             return False
 
 
-    def config_verification(self):
+    def config_verification(self) -> bool:
         status = True
         with open('config.json') as config_json_file:
             config = json.load(config_json_file)
@@ -87,7 +85,7 @@ class Movie(object):
         return status
 
 
-    def __get_video_streams_and_log_file__(self, video):
+    def __get_video_streams_and_log_file__(self, video: str):
         vid_path_source = os.path.join(self.movies_path, video)
         LOG.debug(f'{ vid_path_source = }')
         dt_string = datetime.now().strftime('%Y.%m.%d - %H.%M.%S')
@@ -186,7 +184,7 @@ class Movie(object):
         self.filename_prefix = "".join(random.choice(chars) for _ in range(size))
 
 
-    def __get_first_subtitle_type_stream__(self, selected_streams: list[str]):
+    def __get_first_subtitle_type_stream__(self, selected_streams: list[str]) -> str:
         for i in range(len(selected_streams)):
             for stream in self.streams:
                 if ('stream', selected_streams[i]) in stream.items():
@@ -261,7 +259,7 @@ class Movie(object):
                 self.__command_execution__(command=cmd_exec)
 
 
-    def __is_series__(self):
+    def __is_series__(self) -> int:
         video_count = 0
         for _, f in enumerate(os.listdir(self.movies_path)):
             _, file_extension = os.path.splitext(f)
@@ -338,25 +336,16 @@ class Movie(object):
 
     def __get_styles__(self, file: str) -> dict:
         sub_path_source = os.path.join(self.movies_path, file)
-        sub_styles = []
-        style_regex = re.compile(constants.STYLE_SUB)
-        with codecs.open(sub_path_source, "r", encoding=self.__get_file_encoding__(sub_path_source)) as file_sub:
-            LOG.info(f' Sub: {file}')
-            for line in file_sub:
-                if style_regex.match(line):
-                    style_setting = line[7:].split(",")
-                    sub_styles.append(style_setting[0])
-        file_sub.close()
-        LOG.debug(f'{ sub_styles = }')
+        with codecs.open(sub_path_source, mode="r", encoding=self.__get_file_encoding__(sub_path_source)) as sub_file_source:
+            doc = ass.parse(sub_file_source)
+            style_occurrences = {}
+            for event in doc.events:
+                if event.style in style_occurrences:
+                    style_occurrences[event.style] += 1
+                else:
+                    style_occurrences[event.style] = 1
+        sub_file_source.close()
 
-        sub_file = codecs.open(sub_path_source, "r", encoding=self.__get_file_encoding__(sub_path_source))
-        sub_data = sub_file.read()
-        sub_file.close()
-
-        style_occurrences = {}
-        for style in sub_styles:
-            occurrences = sub_data.count(style)
-            style_occurrences[style] = occurrences
         sorted_style_occurrences = dict(sorted(style_occurrences.items(), key=lambda x: x[1], reverse=True))
         LOG.debug(f'{ sorted_style_occurrences = }')
 
@@ -366,19 +355,13 @@ class Movie(object):
         return sorted_style_occurrences
 
 
-    def __get_max_occurrences_styles__(self, dict_styles: dict, max_styles=3) -> list[str]:
-        styles_with_max_occurrences = heapq.nlargest(max_styles, dict_styles, key=dict_styles.get)
-        LOG.debug(f'{ styles_with_max_occurrences = }')
-        return styles_with_max_occurrences
-
-
     def get_sub_info(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
             if file_extension == ".ass":
                 first_subtitle = f
                 LOG.debug(f'{ first_subtitle = }')
-                self._style_occurrences = self.__get_styles__(file=f)
+                self._style_occurrences = self.__get_styles__(f)
                 return
         LOG.info(' There is no .ass subtitles in folder ')
 
@@ -398,79 +381,6 @@ class Movie(object):
                     sub_path_target
                 ]
                 self.__command_execution__(command=cmd_exec)
-
-
-    def change_subs_styles_ass(self, max_styles: int):
-        """
-        the subtitles that occur most times are considered the main subtitles of the dialogue
-        """
-
-        class StyleFormat(Enum):
-            Name = 0
-            Fontname = 1
-            Fontsize = 2
-            PrimaryColour = 3
-            SecondaryColour = 4
-            OutlineColour = 5
-            BackColour = 6
-            Bold = 7
-            Italic = 8
-            Underline = 9
-            StrikeOut = 10
-            ScaleX = 11
-            ScaleY = 12
-            Spacing = 13
-            Angle = 14
-            BorderStyle = 15
-            Outline = 16
-            Shadow = 17
-            Alignment = 18
-            MarginL = 19
-            MarginR = 20
-            MarginV = 21
-            Encoding = 22
-
-        dialogue_style = {
-            StyleFormat.Fontname: "Arial",
-            StyleFormat.Fontsize: "20",
-            StyleFormat.PrimaryColour: "&H00FFFFFF",
-            StyleFormat.SecondaryColour: "&H00000000",
-            StyleFormat.OutlineColour: "&H00000000",
-            StyleFormat.BackColour: "&H00000000",
-            StyleFormat.Bold: "-1",
-            StyleFormat.Italic: "0",
-            StyleFormat.Underline: "0",
-            StyleFormat.Outline: "1",
-            StyleFormat.Shadow: "0",
-        }
-
-        LOG.info(' Sub template ')
-        LOG.info([f'{k.name}: {dialogue_style[k]}' for k in dialogue_style])
-
-        for _, f in enumerate(os.listdir(self.movies_path), start=1):
-            _, file_extension = os.path.splitext(f)
-            if file_extension == ".ass":
-                styles_with_max_occurrences = self.__get_max_occurrences_styles__(
-                    dict_styles=self._style_occurrences, max_styles=max_styles)
-
-                style_regex = re.compile(constants.STYLE_SUB)
-                sub_path_source = os.path.join(self.movies_path, f)
-                with codecs.open(sub_path_source, mode="r", encoding=self.__get_file_encoding__(sub_path_source)) as file_sub:
-                    new_sub_lines = []
-                    for line in file_sub:
-                        if style_regex.match(line):
-                            style_setting = line[7:].split(",")
-                            if style_setting[0] in styles_with_max_occurrences:
-                                for key in dialogue_style:
-                                    style_setting[key.value] = dialogue_style[key]
-                                line = constants.STYLE_SUB + ",".join(style_setting)
-                                LOG.debug(f'{line}')
-                        new_sub_lines.append(line)
-                file_sub.close()
-
-                with codecs.open(sub_path_source, mode="w", encoding=self.__get_file_encoding__(sub_path_source)) as file_sub:
-                    file_sub.writelines(new_sub_lines)
-                file_sub.close()
 
 
     def __command_execution__(self, command: list[str]) -> subprocess.CompletedProcess[str]:
