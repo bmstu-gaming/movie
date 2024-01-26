@@ -153,10 +153,10 @@ class Movie(object):
     def __get_first_video_in_directory__(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
-            if file_extension == '.mkv':
+            if file_extension == constants.MKV or file_extension == constants.AVI:
                 self.streams_pattern = constants.MKV_STREAMS
                 return f
-            if file_extension == '.mp4':
+            if file_extension == constants.MP4:
                 self.streams_pattern = constants.MP4_STREAMS
                 return f
 
@@ -170,7 +170,7 @@ class Movie(object):
     def remove_video(self, do_remove: bool):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
-            if file_extension == '.mkv':
+            if file_extension in constants.VIDEO:
                 if self.filename_prefix in f:
                     LOG.debug(f'     {self.filename_prefix} video: {f}')
                 else:
@@ -242,7 +242,7 @@ class Movie(object):
     def __run_ffmpeg__(self, streams: list[str]):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
-            if file_extension == '.mkv':
+            if file_extension in constants.VIDEO:
                 vid_path_source = os.path.join(self.movies_path, f)
                 vid_path_target = os.path.join(self.movies_path, f'{self.filename_prefix}-{f}')
 
@@ -264,7 +264,7 @@ class Movie(object):
         video_count = 0
         for _, f in enumerate(os.listdir(self.movies_path)):
             _, file_extension = os.path.splitext(f)
-            if file_extension == '.mkv' or file_extension == '.mp4':
+            if file_extension in constants.VIDEO:
                 video_count += 1
         LOG.debug(f'{ video_count = }')
         return video_count
@@ -297,21 +297,21 @@ class Movie(object):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
 
-            if file_extension == '.mkv' or file_extension == '.mp4':
+            if file_extension in constants.VIDEO:
                 if isSeries:
                     template_vid = self.base_template + ".E{episode_idx:02d}"
 
                 self.__rename__(file=f, template=template_vid, idx=vid_idx, do_rename=do_rename)
                 vid_idx += 1
 
-            if file_extension == '.ass' or file_extension == '.srt':
+            if file_extension in constants.SUBTITLE:
                 if isSeries:
                     template_sub = self.base_template + ".E{episode_idx:02d}.RUS"
 
                 self.__rename__(file=f, template=template_sub, idx=sub_idx, do_rename=do_rename)
                 sub_idx += 1
 
-            if file_extension == '.png' or file_extension == '.jpg':
+            if file_extension in constants.IMAGE:
                 if isSeries:
                     template_img = self.base_template + ".E{episode_idx:02d}"
 
@@ -322,7 +322,7 @@ class Movie(object):
     def subs_convert_srt_to_ass(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             filename, file_extension = os.path.splitext(f)
-            if file_extension == '.srt':
+            if file_extension == constants.SRT:
                 LOG.info(f' {filename} -> .ass ')
 
                 sub_path_source = os.path.join(self.movies_path, f)
@@ -359,7 +359,7 @@ class Movie(object):
     def get_sub_info(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
-            if file_extension == '.ass':
+            if file_extension == constants.ASS:
                 first_subtitle = f
                 LOG.debug(f'{ first_subtitle = }')
                 self._style_occurrences = self.__get_styles__(f)
@@ -370,9 +370,9 @@ class Movie(object):
     def extract_subtitle(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             filename, file_extension = os.path.splitext(f)
-            if file_extension == '.mkv':
+            if file_extension in constants.VIDEO:
                 vid_path_source = os.path.join(self.movies_path, f)
-                sub_path_target = os.path.join(self.movies_path, filename + '.srt')
+                sub_path_target = os.path.join(self.movies_path, filename + constants.SRT)
                 LOG.debug(f'{ vid_path_source = }')
                 LOG.info(f'{ sub_path_target = }')
                 cmd_exec = [
@@ -505,7 +505,7 @@ class Movie(object):
     def preview_generate(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, f_ext = os.path.splitext(f)
-            if f_ext == '.png' or f_ext == '.jpg':
+            if f_ext in constants.IMAGE:
                 LOG.debug(f'{ f = }')
                 img_file_resized = self.__get_resized_preview_image__(f)
                 LOG.debug(f'{ img_file_resized = }')
@@ -522,7 +522,7 @@ class Movie(object):
         preview_idx = 1
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, f_ext = os.path.splitext(f)
-            if f_ext == '.png' or f_ext == '.jpg':
+            if f_ext in constants.IMAGE:
                 LOG.debug(f'{ f = }')
                 LOG.debug(f'{ preview_idx = }')
                 self.__write_number__(f, preview_idx)
@@ -617,7 +617,7 @@ class Movie(object):
     def ass_subtitle_purification(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             f_name, f_ext = os.path.splitext(f)
-            if f_ext == '.ass':
+            if f_ext == constants.ASS:
                 sub_path_source = os.path.join(self.movies_path, f)
                 sub_path_target = os.path.join(self.movies_path, f'{f_name}.out{f_ext}')
                 LOG.debug(f'{ sub_path_source = }')
