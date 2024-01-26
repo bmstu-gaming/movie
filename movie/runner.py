@@ -1,19 +1,13 @@
-import logging
-
 from movie.utils import movie
 from movie.utils import constants
-
-logging.basicConfig()
-LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.INFO)  # DEBUG INFO ERROR CRITICAL
 
 
 def run():
     movie_obj = movie.Movie()
     if movie_obj.config_verification():
-        LOG.info(f' config.json {constants.CHECK}')
+        print(f'config.json {constants.CHECK}')
     else:
-        LOG.error(f' config.json {constants.CROSS}')
+        print(f'config.json {constants.CROSS}')
         return
 
     movie_obj.get_streams_and_log_file()
