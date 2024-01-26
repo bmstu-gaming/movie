@@ -1,6 +1,9 @@
 CHECK = '\u2714'  # ✔ check mark
 CROSS = '\u274c'  # ❌ cross mark
 
+LOG_FILE = 'movie.log'
+EQUALS = '===================='
+
 MKV = '.mkv'
 MP4 = '.mp4'
 AVI = '.avi'
