@@ -1,6 +1,5 @@
 import logging
 import logging.config
-import sys
 
 from movie.utils import constants
 
