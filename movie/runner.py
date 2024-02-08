@@ -1,24 +1,20 @@
 from movie.utils import movie
-from movie.utils import constants
 
 
 def run():
     movie_obj = movie.Movie()
-    if movie_obj.config_verification():
-        print(f'config.json {constants.CHECK}')
-    else:
-        print(f'config.json {constants.CROSS}')
+    if not movie_obj.config_verification():
         return
 
     movie_obj.get_streams_and_log_file()
 
     ### first selected audio/subtitles - default
     # selected_streams = [0, 2, 4]
-    # movie_obj.selected_streams(selected_streams=selected_streams)
+    # movie_obj.selected_streams(selected_streams)
     # movie_obj.remove_video()
 
     # streams_languages = {0: 'jpn', 1: 'jpn'}
-    # movie_obj.set_default_and_language_streams(streams_languages=streams_languages)
+    # movie_obj.set_default_and_language_streams(streams_languages)
     # movie_obj.remove_video()
 
     # movie_obj.get_sub_info()
