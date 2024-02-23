@@ -65,6 +65,15 @@ class Movie(object):
 
 
     def config_verification(self) -> bool:
+        if self.__config_verification__():
+            print(f'config.json {constants.CHECK}')
+            return True
+        else:
+            print(f'config.json {constants.CROSS}')
+            return False
+
+
+    def __config_verification__(self) -> bool:
         LOG.info(f'{constants.EQUALS} CONFIG VERIFICATION {constants.EQUALS}')
         status = True
         with open('config.json') as config_json_file:
@@ -146,6 +155,8 @@ class Movie(object):
             LOG.info(f'{media_stream = }')
         self.streams = media_streams
 
+        return log_path_target
+
 
     def __get_first_video_in_directory__(self):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
@@ -157,12 +168,43 @@ class Movie(object):
                 self.streams_pattern = constants.MP4_STREAMS
                 return f
 
+    def __notation_validation__(self, input_str: str) -> bool:
+        numbers = set('0123456789')
+        commas = set(',')
+        hyphens = set('-')
+
+        for char in input_str:
+            if char not in numbers and char not in commas and char not in hyphens:
+                return False
+        return True
+
+
+    def __notation_recognition__(self, input_str: str) -> list[int]:
+        LOG.debug(f'{constants.EQUALS} notation recognition {constants.EQUALS}')
+        LOG.debug(f'{input_str = }')
+
+        numbers = []
+        try:
+            for num in input_str.split(','):
+                if '-' in num:
+                    start, end = num.split('-')
+                    for i in range(int(start), int(end) + 1):
+                        numbers.append(i)
+                else:
+                    numbers.append(int(num))
+            for num in numbers:
+                LOG.debug(f'{num = }')
+            LOG.debug(f'{constants.EQUALS} notation recognition {constants.EQUALS}')
+        except Exception as e:
+            LOG.error(f'An error occurred: {e}')
+        return numbers
+
 
     def get_streams_and_log_file(self):
         LOG.info(f'{constants.EQUALS} STREAMS AND LOG FILE {constants.EQUALS}')
         first_video = self.__get_first_video_in_directory__()
         LOG.debug(f'{first_video = }')
-        self.__get_video_streams_and_log_file__(video=first_video)
+        return self.__get_video_streams_and_log_file__(first_video)
 
 
     def remove_video(self, do_remove=True):
@@ -241,6 +283,13 @@ class Movie(object):
         self.__run_ffmpeg__(streams_metadata)
 
 
+    def __separate_media_streams__(self) -> tuple[list[dict], list[dict], list[dict]]:
+        video_list = [d for d in self.streams if d['type'] == 'Video']
+        audio_list = [d for d in self.streams if d['type'] == 'Audio']
+        subtitle_list = [d for d in self.streams if d['type'] == 'Subtitle']
+        return video_list, audio_list, subtitle_list
+
+
     def __run_ffmpeg__(self, streams: list[str]):
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             _, file_extension = os.path.splitext(f)
@@ -250,6 +299,9 @@ class Movie(object):
 
                 LOG.info(f'{vid_path_source = }')
                 LOG.debug(f'{vid_path_target = }')
+
+                print(f'folder: {self.movies_path}')
+                print(f'{f} -> {self._filename_prefix}-{f}')
 
                 cmd_exec = [
                     self.ffmpeg,
@@ -356,6 +408,7 @@ class Movie(object):
 
         for key in sorted_style_occurrences:
             LOG.info(f'{key}: {sorted_style_occurrences[key]}')
+            print(f'{key}: {sorted_style_occurrences[key]}')
 
         return sorted_style_occurrences
 
@@ -367,9 +420,10 @@ class Movie(object):
             if file_extension == constants.ASS:
                 first_subtitle = f
                 LOG.debug(f'{first_subtitle = }')
-                self._style_occurrences = self.__get_styles__(f)
+                self.style_occurrences = self.__get_styles__(f)
                 return
         LOG.info('There is no .ass subtitles in folder')
+        print('There is no .ass subtitles in folder')
 
 
     def extract_subtitle(self, remove_subtitle=False):
@@ -381,6 +435,7 @@ class Movie(object):
                 sub_path_target = os.path.join(self.movies_path, filename + constants.SRT)
                 LOG.debug(f'{vid_path_source = }')
                 LOG.info(f'{sub_path_target = }')
+                print(f'{sub_path_target = }')
                 cmd_exec = [
                     self.ffmpeg,
                     '-i', vid_path_source,
@@ -389,7 +444,8 @@ class Movie(object):
                 ]
                 self.__command_execution__(command=cmd_exec)
                 if remove_subtitle:
-                    vid_path_target = os.path.join(self.movies_path, f'{filename}.no_subs{file_extension}')
+                    vid_file_target = f'{filename}.no_subs{file_extension}'
+                    vid_path_target = os.path.join(self.movies_path, vid_file_target)
                     LOG.debug(f'{vid_path_target = }')
                     cmd_exec = [
                         self.ffmpeg,
