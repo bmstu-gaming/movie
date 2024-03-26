@@ -1,6 +1,7 @@
 import ass
 import codecs
 import collections
+import configparser
 from datetime import datetime
 import json
 import os
@@ -66,25 +67,26 @@ class Movie(object):
 
     def config_verification(self) -> bool:
         if self.__config_verification__():
-            print(f'config.json {constants.CHECK}')
+            print(f'{constants.CONFIG} {constants.CHECK}')
             return True
         else:
-            print(f'config.json {constants.CROSS}')
+            print(f'{constants.CONFIG} {constants.CROSS}')
             return False
 
 
     def __config_verification__(self) -> bool:
         LOG.info(f'{constants.EQUALS} CONFIG VERIFICATION {constants.EQUALS}')
         status = True
-        with open('config.json') as config_json_file:
-            config = json.load(config_json_file)
-            try:
-                self.ffmpeg = config['FFMPEG']
-                self.movies_path = config['MOVIES_PATH']
-                self.base_template = config['BASE_TEMPLATE']
-            except Exception as e:
-                LOG.error(f'the configuration file is set incorrectly: {str(e)}')
-                return False
+
+        config = configparser.ConfigParser()
+        config.read(constants.CONFIG)
+        try:
+            self.ffmpeg = config.get('Config', 'FFMPEG')
+            self.movies_path = config.get('Config', 'MOVIES_PATH')
+            self.base_template = config.get('Config', 'BASE_TEMPLATE')
+        except Exception as e:
+            LOG.error(f'the configuration file is set incorrectly: {str(e)}')
+            return False
         status = self.__verification_ffmpeg__()
         status &= self.__verification_movies_path__()
         status &= self.__verification_base_template__()
@@ -603,8 +605,9 @@ class Movie(object):
                 LOG.debug(f'{preview_idx = }')
                 self.__write_number__(f, preview_idx)
                 preview_idx += 1
-    
-    def __subtitle_purification__(self, sub_path_source, sub_path_target):
+
+
+    def __subtitle_purification__(self, sub_path_source, sub_path_target, translate=False):
         with codecs.open(sub_path_source, mode='r', encoding=self.__get_file_encoding__(sub_path_source)) as sub_file_source:
             doc = ass.parse(sub_file_source)
 
@@ -673,6 +676,12 @@ class Movie(object):
 
             for event in doc.events:
                 clear_text = re.sub(r'{[^}]*}', '', event.text).strip()
+
+                if translate:
+                    import deep_translator
+                    clear_text = clear_text.replace('\\N', ' \\N ')
+                    clear_text = deep_translator.GoogleTranslator(target='ru').translate(clear_text)
+
                 event.text = clear_text
                 if re.match(r'^Main', string=event.style) or re.match(r'^Default', string=event.style):
                     event.style = 'Main'
@@ -688,7 +697,7 @@ class Movie(object):
         os.remove(sub_path_source)
 
 
-    def ass_subtitle_purification(self):
+    def ass_subtitle_purification(self, translate=False):
         LOG.info(f'{constants.EQUALS} {constants.ASS}\/ SUBTITLE PURIFACATION \/{constants.EQUALS}')
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             f_name, f_ext = os.path.splitext(f)
@@ -697,5 +706,5 @@ class Movie(object):
                 sub_path_target = os.path.join(self.movies_path, f'{f_name}.out{f_ext}')
                 LOG.debug(f'{sub_path_source = }')
                 LOG.debug(f'{sub_path_target = }')
-                self.__subtitle_purification__(sub_path_source, sub_path_target)
+                self.__subtitle_purification__(sub_path_source, sub_path_target, translate=translate)
         LOG.info(f'{constants.EQUALS} {constants.ASS}/\ SUBTITLE PURIFACATION /\{constants.EQUALS}')
