@@ -1,5 +1,7 @@
 CHECK = '\u2714'  # ✔ check mark
 CROSS = '\u274c'  # ❌ cross mark
+CONFIG = 'config.ini'
+
 
 LOG_FILE = 'movie.log'
 EQUALS = '===================='
@@ -15,7 +17,8 @@ SUBTITLE = [ASS, SRT]
 
 PNG = '.png'
 JPG = '.jpg'
-IMAGE = [PNG, JPG]
+JPEG = '.jpeg'
+IMAGE = [PNG, JPG, JPEG]
 
 MKV_STREAMS = r'Stream #[0-9]*:([0-9]*)(\([a-z]*\))?: ([a-z,A-Z]*)'
 MP4_STREAMS = r'Stream #[0-9]*:([0-9]*)\[[0-9]x[0-9]\](\([a-z]*\))?: ([a-z,A-Z]*)'

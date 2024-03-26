@@ -5,7 +5,7 @@ from movie.utils import constants
 from movie import scenarios
 
 
-def run_menu():
+def main_menu():
     print(f'logs in: {constants.LOG_FILE}')
     movie_obj = movie.Movie()
     if not movie_obj.config_verification():

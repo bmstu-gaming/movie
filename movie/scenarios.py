@@ -8,6 +8,7 @@ from movie.utils import movie
 def common_call(object: movie.Movie, function):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
     function(object)
+    pu.println('Process completed successfully!')
     pu.enter_to_continue('Press [Enter] to go back')
 
 
@@ -111,7 +112,7 @@ def subtitle_extract_to_ass(object: movie.Movie):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
     pu.println(
         f'''
-Extracting subtitle stream to .srt file
+Extracting subtitle stream to .ass file
         '''
     )
     try:
@@ -133,5 +134,11 @@ Making subtitle clear
         '''
     )
     object.get_sub_info()
-    object.ass_subtitle_purification()
+    try:
+        if pu.confirm_answer('aa', message='Would you like to translate subtitle (autotranslate)?'):
+            object.ass_subtitle_purification(translate=True)
+        else:
+            object.ass_subtitle_purification()
+    except Exception as e:
+        pu.println(f'Error: {e}')    
     pu.enter_to_continue('Press [Enter] to go back')
