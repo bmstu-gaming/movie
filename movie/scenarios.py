@@ -126,6 +126,21 @@ Extracting subtitle stream to .ass file
     pu.enter_to_continue('Press [Enter] to go back')
 
 
+def subtitle_ass_translation(object: movie.Movie):
+    pu = consolemenu.PromptUtils(consolemenu.Screen())
+    pu.println(
+        f'''
+Translation subtitle
+        '''
+    )
+    object.get_sub_info()
+    try:
+        if pu.confirm_answer('aa', message='Would you like to translate subtitle (autotranslate)?'):
+            object.ass_subtitle_translation()
+    except Exception as e:
+        pu.println(f'Error: {e}')    
+    pu.enter_to_continue('Press [Enter] to go back')
+
 def subtitle_ass_purification(object: movie.Movie):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
     pu.println(
@@ -134,11 +149,5 @@ Making subtitle clear
         '''
     )
     object.get_sub_info()
-    try:
-        if pu.confirm_answer('aa', message='Would you like to translate subtitle (autotranslate)?'):
-            object.ass_subtitle_purification(translate=True)
-        else:
-            object.ass_subtitle_purification()
-    except Exception as e:
-        pu.println(f'Error: {e}')    
+    object.ass_subtitle_purification()
     pu.enter_to_continue('Press [Enter] to go back')
