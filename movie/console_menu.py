@@ -28,9 +28,11 @@ def main_menu():
     item_subtitle_information = consolemenu.items.FunctionItem("Information", scenarios.common_call, args=[movie_obj, movie.Movie.get_sub_info])
     item_subtitle_extract_to_ass = consolemenu.items.FunctionItem("Extraction", scenarios.subtitle_extract_to_ass, args=[movie_obj])
     item_subtitle_purification = consolemenu.items.FunctionItem("Purification", scenarios.subtitle_ass_purification, args=[movie_obj])
+    item_subtitle_translation = consolemenu.items.FunctionItem("Translation", scenarios.subtitle_ass_translation, args=[movie_obj])
     subtitle_settings_submenu.append_item(item_subtitle_information)
     subtitle_settings_submenu.append_item(item_subtitle_extract_to_ass)
     subtitle_settings_submenu.append_item(item_subtitle_purification)
+    subtitle_settings_submenu.append_item(item_subtitle_translation)
     item4 = consolemenu.items.SubmenuItem("Subtitle settings", submenu=subtitle_settings_submenu)
     item4.set_menu(menu)
 

@@ -3,7 +3,7 @@ import codecs
 import collections
 import configparser
 from datetime import datetime
-import json
+import deep_translator
 import os
 import subprocess
 from PIL import Image, ImageDraw, ImageFont
@@ -79,7 +79,7 @@ class Movie(object):
         status = True
 
         config = configparser.ConfigParser()
-        config.read(constants.CONFIG)
+        config.read(constants.CONFIG, encoding='utf-8')
         try:
             self.ffmpeg = config.get('Config', 'FFMPEG')
             self.movies_path = config.get('Config', 'MOVIES_PATH')
@@ -607,7 +607,7 @@ class Movie(object):
                 preview_idx += 1
 
 
-    def __subtitle_purification__(self, sub_path_source, sub_path_target, translate=False):
+    def __subtitle_purification__(self, sub_path_source, sub_path_target):
         with codecs.open(sub_path_source, mode='r', encoding=self.__get_file_encoding__(sub_path_source)) as sub_file_source:
             doc = ass.parse(sub_file_source)
 
@@ -676,14 +676,12 @@ class Movie(object):
 
             for event in doc.events:
                 clear_text = re.sub(r'{[^}]*}', '', event.text).strip()
-
-                if translate:
-                    import deep_translator
-                    clear_text = clear_text.replace('\\N', ' \\N ')
-                    clear_text = deep_translator.GoogleTranslator(target='ru').translate(clear_text)
-
                 event.text = clear_text
-                if re.match(r'^Main', string=event.style) or re.match(r'^Default', string=event.style):
+                if re.match(r'^Основной-сверху', string=event.style):
+                    event.style = 'Signs'
+                elif (re.match(r'^Main', string=event.style) or 
+                    re.match(r'^Default', string=event.style) or 
+                    re.match(r'^Основной', string=event.style)):
                     event.style = 'Main'
                 else:
                     event.style = 'Signs'
@@ -697,7 +695,7 @@ class Movie(object):
         os.remove(sub_path_source)
 
 
-    def ass_subtitle_purification(self, translate=False):
+    def ass_subtitle_purification(self):
         LOG.info(f'{constants.EQUALS} {constants.ASS}\/ SUBTITLE PURIFACATION \/{constants.EQUALS}')
         for _, f in enumerate(os.listdir(self.movies_path), start=1):
             f_name, f_ext = os.path.splitext(f)
@@ -706,5 +704,35 @@ class Movie(object):
                 sub_path_target = os.path.join(self.movies_path, f'{f_name}.out{f_ext}')
                 LOG.debug(f'{sub_path_source = }')
                 LOG.debug(f'{sub_path_target = }')
-                self.__subtitle_purification__(sub_path_source, sub_path_target, translate=translate)
+                self.__subtitle_purification__(sub_path_source, sub_path_target)
+        LOG.info(f'{constants.EQUALS} {constants.ASS}/\ SUBTITLE PURIFACATION /\{constants.EQUALS}')
+
+
+    def __subtitle_translation__(self, sub_path_source, sub_path_target):
+        with codecs.open(sub_path_source, mode='r', encoding=self.__get_file_encoding__(sub_path_source)) as sub_file_source:
+            doc = ass.parse(sub_file_source)
+            for event in doc.events:
+                clear_text = re.sub(r'{[^}]*}', '', event.text).strip()
+                clear_text = clear_text.replace('\\N', ' \\N ')
+                clear_text = deep_translator.GoogleTranslator(target='ru').translate(clear_text)
+
+            with open(sub_path_target, 'w', encoding='utf_8_sig') as sub_file_target:
+                doc.dump_file(sub_file_target)
+            sub_file_target.close()
+        sub_file_source.close()
+
+        LOG.info(f'removing: {sub_path_source}')
+        os.remove(sub_path_source)
+
+
+    def ass_subtitle_translation(self):
+        LOG.info(f'{constants.EQUALS} {constants.ASS}\/ SUBTITLE TRANSLATION \/{constants.EQUALS}')
+        for _, f in enumerate(os.listdir(self.movies_path), start=1):
+            f_name, f_ext = os.path.splitext(f)
+            if f_ext == constants.ASS:
+                sub_path_source = os.path.join(self.movies_path, f)
+                sub_path_target = os.path.join(self.movies_path, f'{f_name}.translation-out{f_ext}')
+                LOG.debug(f'{sub_path_source = }')
+                LOG.debug(f'{sub_path_target = }')
+                self.__subtitle_translation__(sub_path_source, sub_path_target)
         LOG.info(f'{constants.EQUALS} {constants.ASS}/\ SUBTITLE PURIFACATION /\{constants.EQUALS}')
