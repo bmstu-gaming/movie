@@ -14,6 +14,7 @@ def main_menu():
     menu = consolemenu.ConsoleMenu("Main menu", prologue_text=(f'logs in: {constants.LOG_FILE}'))
 
     item1 = consolemenu.items.FunctionItem("Config check", scenarios.common_call, args=[movie_obj, movie.Movie.config_verification])
+
     item2 = consolemenu.items.FunctionItem("Streams info & log", scenarios.streams_info, args=[movie_obj])
 
     selection_stream_submenu = consolemenu.ConsoleMenu('Streams selection', prologue_text='select the type of indication for saving streams:')
