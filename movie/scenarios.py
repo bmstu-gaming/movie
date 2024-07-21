@@ -141,6 +141,7 @@ Translation subtitle
         pu.println(f'Error: {e}')    
     pu.enter_to_continue('Press [Enter] to go back')
 
+
 def subtitle_ass_purification(object: movie.Movie):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
     pu.println(

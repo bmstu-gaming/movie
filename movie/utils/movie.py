@@ -674,15 +674,15 @@ class Movie(object):
             doc.styles = ass.section.StylesSection('V4+ Styles', subs)
             LOG.debug(f'{doc.styles = }')
 
+            frequent_style = str(next(iter(self.style_occurrences)))
+            LOG.debug(f'{frequent_style = }')
+
             for event in doc.events:
                 clear_text = re.sub(r'{[^}]*}', '', event.text).strip()
                 event.text = clear_text
-                if re.match(r'^Основной-сверху', string=event.style):
-                    event.style = 'Signs'
-                elif (re.match(r'^Main', string=event.style) or 
-                    re.match(r'^Default', string=event.style) or 
-                    re.match(r'^Основной', string=event.style)):
-                    event.style = 'Main'
+
+                if (re.match(rf'^{frequent_style}', string=event.style)):
+                    event.style = 'Main' 
                 else:
                     event.style = 'Signs'
 
