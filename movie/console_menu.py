@@ -1,19 +1,17 @@
 import consolemenu
 
-from movie.utils import movie
+from movie.utils import config
 from movie.utils import constants
+from movie.utils import movie
 from movie import scenarios
 
 
 def main_menu():
-    print(f'logs in: {constants.LOG_FILE}')
-    movie_obj = movie.Movie()
-    if not movie_obj.config_verification():
-        return
+    movie_obj = config.apply_config()
 
     menu = consolemenu.ConsoleMenu("Main menu", prologue_text=(f'logs in: {constants.LOG_FILE}'))
 
-    item1 = consolemenu.items.FunctionItem("Config check", scenarios.common_call, args=[movie_obj, movie.Movie.config_verification])
+    item1 = consolemenu.items.FunctionItem("Update config", scenarios.common_call, args=[movie_obj, config.update_config])
 
     item2 = consolemenu.items.FunctionItem("Streams info & log", scenarios.streams_info, args=[movie_obj])
 
