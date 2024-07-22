@@ -1,7 +1,7 @@
 CHECK = '\u2714'  # ✔ check mark
 CROSS = '\u274c'  # ❌ cross mark
-CONFIG = 'config.ini'
-
+CONFIG_PATH = 'config.ini'
+NAME_TEMPLATE_VERIFICATION_REGEX = r'^[^\/\\\:\*\?\"\<\>\|]+$'
 
 LOG_FILE = 'movie.log'
 EQUALS = '===================='
