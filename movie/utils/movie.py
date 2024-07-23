@@ -20,9 +20,10 @@ from movie.utils.logging_config import LOG
 
 
 class Movie(object):
-    def __init__(self, ffmpeg_path: str, movies_folder: str, name_template: str) -> None:
+    def __init__(self, ffmpeg_path: str, ffprobe_path: str, movies_folder: str, name_template: str) -> None:
         self.__filename_prefix_generator__()
         self.ffmpeg_path = ffmpeg_path
+        self.ffprobe_path = ffprobe_path
         self.movies_folder = movies_folder
         self.name_template = name_template
 
@@ -33,7 +34,7 @@ class Movie(object):
         dt_string = datetime.now().strftime('%Y.%m.%d - %H.%M.%S')
         LOG.debug(f'{dt_string = }')
 
-        cmd_exec = [self.ffmpeg_path, '-i', vid_path_source]
+        cmd_exec = [self.ffprobe_path, vid_path_source]
         stdout = command.execute(cmd_exec)
         log_data = stdout.stderr
 
@@ -43,11 +44,11 @@ class Movie(object):
             os.makedirs(logs_folder)
 
         log_file = f'{dt_string}-{video}.log'
-        log_stderr = stdout.stderr.split('\n')
+        log_info = log_data.split('\n')
         log_path_target = os.path.join(logs_folder, log_file)
 
         with open(log_path_target, 'w', encoding='utf-8') as fp:
-            for item in log_stderr:
+            for item in log_info:
                 fp.write('%s\n' % item)
         LOG.info(f'info in: {log_path_target}')
 

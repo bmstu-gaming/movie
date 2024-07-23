@@ -2,6 +2,7 @@ import configparser
 import os
 import re
 import sys
+from typing import List
 from typing import Tuple
 
 from movie.utils import command
@@ -16,27 +17,30 @@ def _config_load(config_path: str = constants.CONFIG_PATH) -> configparser.Confi
     return config
 
 
-def _config_get_values(movie_config: configparser.ConfigParser) -> Tuple[str, str, str]:
-    ffmpeg_path   = str(movie_config.get('Config', 'FFMPEG_PATH', fallback=None))
-    movies_folder = str(movie_config.get('Config', 'MOVIES_FOLDER', fallback=None))
-    name_template = str(movie_config.get('Config', 'NAME_TEMPLATE', fallback=None))
-    return ffmpeg_path, movies_folder, name_template
+def _config_get_values(movie_config: configparser.ConfigParser) -> Tuple[List[str]]:
+    return (str(movie_config.get('Config', 'FFMPEG_PATH', fallback=None)),
+            str(movie_config.get('Config', 'FFPROBE_PATH', fallback=None)),
+            str(movie_config.get('Config', 'MOVIES_FOLDER', fallback=None)),
+            str(movie_config.get('Config', 'NAME_TEMPLATE', fallback=None)))
 
 
 def _config_validate(movie_config: configparser.ConfigParser) -> Tuple[dict, bool]:
     config_statuses = {}
     is_valid = True
 
-    ffmpeg_path, movies_folder, name_template = _config_get_values(movie_config)
+    ffmpeg_path, ffprobe_path, movies_folder, name_template = _config_get_values(movie_config)
 
     result, message = _verification_ffmpeg_path(ffmpeg_path)
     is_valid = is_valid and result
     config_statuses['FFMPEG_PATH'] = f'"{ffmpeg_path}" {constants.CHECK if result else constants.CROSS} {message}'
+    
+    result, message = _verification_ffprobe_path(ffprobe_path)
+    is_valid = is_valid and result
+    config_statuses['FFPROBE_PATH'] = f'"{ffprobe_path}" {constants.CHECK if result else constants.CROSS} {message}'
 
     result, message = _verification_movies_folder(movies_folder)
     is_valid = is_valid and result
     config_statuses['MOVIES_FOLDER'] = f'"{movies_folder}" {constants.CHECK if result else constants.CROSS} {message}'
-
 
     result, message = _verification_name_template(name_template)
     is_valid = is_valid and result
@@ -53,6 +57,22 @@ def _verification_ffmpeg_path(ffmpeg_path: str) -> Tuple[bool, str]:
         return False, 'file not found'
 
     run_cmd = [ffmpeg_path, '-version']
+    try:
+        command.execute(run_cmd)
+    except Exception as exc:
+        return False, str(exc)
+
+    return True, ''
+
+
+def _verification_ffprobe_path(ffprobe_path: str) -> Tuple[bool, str]:
+    if not ffprobe_path:
+        return False, 'not set'
+
+    if not os.path.isfile(ffprobe_path):
+        return False, 'file not found'
+
+    run_cmd = [ffprobe_path, '-version']
     try:
         command.execute(run_cmd)
     except Exception as exc:
