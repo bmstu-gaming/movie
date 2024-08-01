@@ -13,7 +13,7 @@ from movie.utils.movie import Movie
 
 def _config_load(config_path: str = constants.CONFIG_PATH) -> configparser.ConfigParser:
     config = configparser.ConfigParser()
-    config.read(config_path)
+    config.read(config_path, encoding='utf-8')
     return config
 
 
