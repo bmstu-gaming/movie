@@ -7,12 +7,15 @@ if not exist .venv (
     python -m venv .venv
 )
 
-
 call .venv\Scripts\activate
 
 echo .venv activate check...
+if %errorlevel% neq 0 (
+    echo failed to activate virtual environment. Exit.
+    exit /b 1
+)
 where python
-python -m pip --version
+pip --version
 
 echo install dependencies from file requirements.txt...
 pip install -r requirements.txt
