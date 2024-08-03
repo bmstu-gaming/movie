@@ -5,7 +5,7 @@ from movie.utils.logging_config import LOG
 
 
 def execute(command: list[str]) -> subprocess.CompletedProcess[str]:
-    LOG.debug(f'╔{constants.EQUALS} COMMAND EXECUTION {constants.EQUALS}╗')
+    LOG.debug(constants.LOG_FUNCTION_START.format(name = 'COMMAND EXECUTION'))
     command_str = ' '.join(command)
     LOG.debug(f'{command_str = }')
 
@@ -15,6 +15,6 @@ def execute(command: list[str]) -> subprocess.CompletedProcess[str]:
     LOG.debug(f'{stdout.returncode = }')
     LOG.debug(f'{stdout.stderr = }')
     LOG.debug(f'{stdout.stdout = }')
-    LOG.debug(f'╚{constants.EQUALS} COMMAND EXECUTION {constants.EQUALS}╝')
+    LOG.debug(constants.LOG_FUNCTION_END.format(name = 'COMMAND EXECUTION'))
 
     return stdout

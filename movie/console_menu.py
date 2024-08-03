@@ -2,11 +2,15 @@ import consolemenu
 
 from movie.utils import config
 from movie.utils import constants
+from movie.utils.logging_config import LOG
 from movie.utils import movie
 from movie import scenarios
 
 
 def main_menu():
+    LOG.info('')
+    LOG.info('                      PROGRAM START')
+    LOG.info('')
     movie_obj = config.apply_config()
 
     menu = consolemenu.ConsoleMenu("Main menu", prologue_text=(f'logs in: {constants.LOG_FILE}'))
@@ -16,8 +20,8 @@ def main_menu():
     item2 = consolemenu.items.FunctionItem("Streams info & log", scenarios.streams_info, args=[movie_obj])
 
     selection_stream_submenu = consolemenu.ConsoleMenu('Streams selection', prologue_text='select the type of indication for saving streams:')
-    item_selected_streams = consolemenu.items.FunctionItem("Select Streams (simple)", scenarios.selected_streams, args=[movie_obj])
-    item_selected_streams_and_language = consolemenu.items.FunctionItem("Select Streams (with language)", scenarios.set_default_and_language_streams, args=[movie_obj])
+    item_selected_streams = consolemenu.items.FunctionItem("Select Streams (simple)", scenarios.select_and_process_streams, args=[movie_obj])
+    item_selected_streams_and_language = consolemenu.items.FunctionItem("Select Streams (with language)", scenarios.select_and_process_streams_with_language, args=[movie_obj])
     selection_stream_submenu.append_item(item_selected_streams)
     selection_stream_submenu.append_item(item_selected_streams_and_language)
     item3 = consolemenu.items.SubmenuItem("Select streams", submenu=selection_stream_submenu)

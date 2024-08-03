@@ -124,4 +124,4 @@ def apply_config(config_path: str = constants.CONFIG_PATH) -> Movie:
 
 def update_config(obj: Movie, config_path: str = constants.CONFIG_PATH) -> None:
     config = _load_and_validate_config(config_path)
-    obj.ffmpeg_path, obj.movies_folder, obj.name_template = _config_get_values(config)
+    obj.ffmpeg_path, obj.ffprobe_path, obj.movies_folder, obj.name_template = _config_get_values(config)
