@@ -3,32 +3,37 @@ import consolemenu
 import re
 
 from movie.utils import movie
+from movie.utils import notation
+
+def _function_end(pu: consolemenu.PromptUtils) -> None:
+    pu.println('\nProcess completed successfully!')
+    pu.enter_to_continue('Press [Enter] to go back')
 
 
 def common_call(object: movie.Movie, function):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
     function(object)
-    pu.println('Process completed successfully!')
-    pu.enter_to_continue('Press [Enter] to go back')
+    _function_end(pu)
 
 
 def streams_info(object: movie.Movie):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
     print_streams(pu, object, print_log_file=True)
-    pu.enter_to_continue('Press [Enter] to go back')
+
+    _function_end(pu)
 
 
 def color_print_streams(pu: consolemenu.PromptUtils, title: str, streams: list[dict], color: str):
     pu.println(f'{colors.color(title, fg=f"{color}")}')
     for stream in streams:
-        out = f'{stream.get("stream")}: ({stream.get("language")}) {stream.get("title") if stream.get("title") is not None else ""}'
+        out = f'{stream.get("stream_id")}: ({stream.get("language")}) {stream.get("title") if stream.get("title") is not None else ""}'
         pu.println(f'{colors.color(out, fg=f"{color}")}')
 
 
 def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie, print_log_file=False):
     logs_file_path = object.get_streams_and_log_file()
     if print_log_file:
-        pu.println(f'{colors.color(f"ffmpeg work logs in: {logs_file_path}", fg=f"#FFFFFF")}')
+        pu.println(f'{colors.color(f"ffprobe work logs in: {logs_file_path}", fg=f"#FFFFFF")}')
     video_streams, audio_streams, subtitle_streams = object.__separate_media_streams__()
     pu.println(f'{colors.color("#: (Language) Title", fg=f"#FFFFFF")}')
     color_print_streams(pu, 'Video streams', video_streams, '#FFFF00')
@@ -37,7 +42,6 @@ def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie, print_log_fi
 
 
 def get_input_selected_streams(pu: consolemenu.PromptUtils, object: movie.Movie):
-    object.get_streams_and_log_file()
     print_streams(pu, object)
 
     pu.println(
@@ -53,59 +57,58 @@ Enter: q or quit to exit
         result = pu.input("\nEnter stream numbers to save")
         input = result.input_string.strip()
         if re.match(r'^q', string=input):
-            pu.enter_to_continue('Press [Enter] to go back')
-            return
+            pu.println(f'Quiting\n')
+            return None
 
         if input == '':
             pu.println(f'Empty string\n')
             continue
 
-        if not object.__notation_validation__(input):
+        if not notation.validation(input):
             pu.println(f'Wrong entered stream numbers\n')
             continue
 
-        selected_streams = object.__notation_recognition__(input)
-        pu.println(f'\nStreams to save: {selected_streams}')
-        if pu.confirm_answer(selected_streams, message='Is streams correct?'):
+        input_streams = notation.recognition(input)
+        pu.println(f'\nStreams to save: {input_streams}')
+        if pu.confirm_answer(input_streams, message='Is streams correct?'):
             print_flag = True
-    return selected_streams
+    return input_streams
 
 
-def selected_streams(object: movie.Movie):
+def select_and_process_streams(object: movie.Movie):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
-    selected_streams = get_input_selected_streams(pu, object)
+    input_streams = get_input_selected_streams(pu, object)
+    if input_streams is not None:
+        pu.println(f'\nStarting saving streams process\n')
+        object.process_streams(input_streams)
+        object.remove_video()
 
-    pu.println(f'\nStarting saving streams process\n')
-    object.selected_streams(selected_streams)
-    object.remove_video()
-    pu.println(f'\nProcess is completed!\n')
-
-    pu.enter_to_continue('Press [Enter] to go back')
+    _function_end(pu)
 
 
-def set_default_and_language_streams(object: movie.Movie):
+def select_and_process_streams_with_language(object: movie.Movie):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
-    selected_streams = get_input_selected_streams(pu, object)
+    input_streams = get_input_selected_streams(pu, object)
 
-    pu.println(
-        f'''
-Please print language for each choosen stream. 
-Use ISO 639 language codes (Set 1 or Set 2/T or Set 2/B)
-more info: https://wikipedia.org/wiki/List_of_ISO_639_language_codes
-For example: en or jpn or ru
-        '''
-    )    
-    streams_languages = {}
-    for stream_number in selected_streams:
-        result = pu.input(f"Enter language for {stream_number}")
-        streams_languages[stream_number] = result.input_string
+    if input_streams is not None:
+        pu.println(
+            f'''
+    Please print language for each choosen stream. 
+    Use ISO 639 language codes (Set 1 or Set 2/T or Set 2/B)
+    more info: https://wikipedia.org/wiki/List_of_ISO_639_language_codes
+    For example: en or jpn or ru
+            '''
+        )    
+        streams_languages = {}
+        for stream_number in input_streams:
+            result = pu.input(f"Enter language for {stream_number}")
+            streams_languages[stream_number] = result.input_string
 
-    pu.println(f'\nStarting saving streams process\n')
-    object.set_default_and_language_streams(streams_languages)
-    object.remove_video()
-    pu.println(f'\nProcess is completed!\n')
+        pu.println(f'\nStarting saving streams process\n')
+        object.process_streams_with_language(streams_languages)
+        object.remove_video()
 
-    pu.enter_to_continue('Press [Enter] to go back')
+    _function_end(pu)
 
 
 def subtitle_extract_to_ass(object: movie.Movie):
@@ -116,14 +119,15 @@ Extracting subtitle stream to .ass file
         '''
     )
     try:
-        if pu.confirm_answer('aa', message='Would you like to remove subtitle from video?'):
-            object.extract_subtitle(remove_subtitle=True)
+        if pu.confirm_answer('aa', message='Save subtitle track in video file?'):
+            object.extract_subtitle(keep_subtitles=True)
         else:
             object.extract_subtitle()
         object.subs_convert_srt_to_ass()
     except Exception as e:
         pu.println(f'Error: {e}')
-    pu.enter_to_continue('Press [Enter] to go back')
+
+    _function_end(pu)
 
 
 def subtitle_ass_translation(object: movie.Movie):
@@ -138,8 +142,9 @@ Translation subtitle
         if pu.confirm_answer('aa', message='Would you like to translate subtitle (autotranslate)?'):
             object.ass_subtitle_translation()
     except Exception as e:
-        pu.println(f'Error: {e}')    
-    pu.enter_to_continue('Press [Enter] to go back')
+        pu.println(f'Error: {e}')
+
+    _function_end(pu)
 
 
 def subtitle_ass_purification(object: movie.Movie):
@@ -151,4 +156,5 @@ Making subtitle clear
     )
     object.get_sub_info()
     object.ass_subtitle_purification()
-    pu.enter_to_continue('Press [Enter] to go back')
+
+    _function_end(pu)
