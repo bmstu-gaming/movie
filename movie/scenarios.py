@@ -1,6 +1,7 @@
+import re
+
 import colors
 import consolemenu
-import re
 
 from movie.utils import movie
 from movie.utils import notation
@@ -88,7 +89,6 @@ def select_and_process_streams(object: movie.Movie):
     if input_streams is not None:
         pu.println(f'\nStarting saving streams process\n')
         object.process_streams(input_streams)
-        object.remove_video()
 
     _function_end(pu)
 
@@ -113,7 +113,6 @@ def select_and_process_streams_with_language(object: movie.Movie):
 
         pu.println(f'\nStarting saving streams process\n')
         object.process_streams_with_language(streams_languages)
-        object.remove_video()
 
     _function_end(pu)
 

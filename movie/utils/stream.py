@@ -27,7 +27,7 @@ class Stream:
         return f'{self.index}: ({self.tags.get("language")}) {title}'
     
     @property
-    def type(self):
+    def stream_type(self):
         return self._codec_type
 
 
@@ -42,4 +42,4 @@ def parse_ffprobe_output(output: str) -> list[Stream]:
 
 
 def filter_media_streams(streams: list[Stream]) -> list[Stream]:
-    return [stream for stream in streams if stream.type in ['video', 'audio', 'subtitle']]
+    return [stream for stream in streams if stream.stream_type in ['video', 'audio', 'subtitle']]
