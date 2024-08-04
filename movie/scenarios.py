@@ -4,6 +4,7 @@ import re
 
 from movie.utils import movie
 from movie.utils import notation
+from movie.utils import stream
 
 def _function_end(pu: consolemenu.PromptUtils) -> None:
     pu.println('\nProcess completed successfully!')
@@ -23,15 +24,18 @@ def streams_info(object: movie.Movie):
     _function_end(pu)
 
 
-def color_print_streams(pu: consolemenu.PromptUtils, title: str, streams: list[dict], color: str):
+def color_print_streams(pu: consolemenu.PromptUtils, title: str, streams: list[stream.Stream], color: str):
     pu.println(f'{colors.color(title, fg=f"{color}")}')
     for stream in streams:
-        out = f'{stream.get("stream_id")}: ({stream.get("language")}) {stream.get("title") if stream.get("title") is not None else ""}'
-        pu.println(f'{colors.color(out, fg=f"{color}")}')
+        pu.println(f'{colors.color(stream, fg=f"{color}")}')
 
 
-def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie, print_log_file=False):
+def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie, print_log_file=False) -> (str | None):
     logs_file_path = object.get_streams_and_log_file()
+    if logs_file_path is None:
+        pu.println(f'There is no video file in movie folder: {object.movies_folder}')
+        return None
+
     if print_log_file:
         pu.println(f'{colors.color(f"ffprobe work logs in: {logs_file_path}", fg=f"#FFFFFF")}')
     video_streams, audio_streams, subtitle_streams = object.__separate_media_streams__()
@@ -39,19 +43,22 @@ def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie, print_log_fi
     color_print_streams(pu, 'Video streams', video_streams, '#FFFF00')
     color_print_streams(pu, 'Audio streams', audio_streams, '#00FFFF')
     color_print_streams(pu, 'Subtitle streams', subtitle_streams, '#FF00FF')
+    return 'OK'
 
-
-def get_input_selected_streams(pu: consolemenu.PromptUtils, object: movie.Movie):
-    print_streams(pu, object)
+def get_input_selected_streams(pu: consolemenu.PromptUtils, object: movie.Movie) -> (list[int] | None):
+    if print_streams(pu, object) is None:
+        return None
 
     pu.println(
         f'''
 Please select one or more entries separated by commas, and/or a range of numbers.
-For example: 0,1,4,6 or 0-5 or 0-2,4,7-10
+For example: 0,1,4,6 or 0-5 or 0-2,4,7-10.
+The first selected stream in the category will be set as default.
 
 Enter: q or quit to exit
         '''
     )
+    input_streams = []
     print_flag = False
     while not print_flag:
         result = pu.input("\nEnter stream numbers to save")
