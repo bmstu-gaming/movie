@@ -1,6 +1,7 @@
 import os
 import time
 
+from movie.utils import constants
 from movie.utils.logging_config import LOG
 
 
@@ -23,5 +24,34 @@ def remove(file_path: str) -> None:
                 break
         except Exception as e:
             LOG.error(f'Error while removing: {str(e)}')
-            print(err_str)
+            print(str(e))
             break
+
+
+def rename(old_path, new_path):
+    while True:
+        LOG.debug(f'trying to rename: {old_path}')
+        try:
+            os.rename(old_path, new_path)
+            break
+        except OSError as e:
+            if e.winerror == 32:
+                err_str = f'Error accessing file {old_path}: the file is using by another process. Please close the program that is using the file.'
+                LOG.error(err_str)
+                print(err_str)
+                time.sleep(5)
+            else:
+                err_str = f'Error renaming file {old_path}: {e}'
+                LOG.error(err_str)
+                print(err_str)
+                break
+        except Exception as e:
+            LOG.error(f'Error while renaming file {old_path}: {str(e)}')
+            print(str(e))
+            break
+
+
+def restoring_target_filename_to_source(path_target: str, path_source: str):
+    LOG.debug(constants.LOG_FUNCTION_START.format(name='restoring target filename to source filename'))
+    remove(path_source)
+    rename(path_target, path_source)

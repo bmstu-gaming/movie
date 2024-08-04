@@ -85,34 +85,17 @@ class Movie(object):
         LOG.debug(f'{first_video = }')
         if first_video is None:
             return None
-        else:
-            return self.__get_video_streams_and_log_file__(first_video)
+        return self.__get_video_streams_and_log_file__(first_video)
 
 
-    def remove_video(self, do_remove=True):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = 'REMOVE VIDEO'))
-        LOG.debug(f'{self._filename_prefix = }')
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
-            _, file_extension = os.path.splitext(f)
-            if file_extension in constants.VIDEO:
-                if self._filename_prefix in f:
-                    LOG.debug(f'{self._filename_prefix} video: {f}')
-                else:
-                    LOG.debug(f'non {self._filename_prefix} video: {f}')
-                    vid_non_template_path = os.path.join(self.movies_folder, f)
-                    if do_remove:
-                        LOG.info(f'removing: {vid_non_template_path}')
-                        files.remove(vid_non_template_path)
-
-
-    def __get_first_stream_of_type__(self,  selected_streams: list[int], type: str) -> int:
+    def __get_first_stream_of_type__(self,  selected_streams: list[int], stream_type: str) -> int:
         stream_indices = {stream.index for stream in self.streams}
-        LOG.debug(f'{type = }')
+        LOG.debug(f'{stream_type = }')
         for selected_stream in selected_streams:
             if selected_stream in stream_indices:
                 corresponding_stream = next(stream for stream in self.streams if stream.index == selected_stream)
-                LOG.debug(f'{corresponding_stream} - {corresponding_stream.type}')
-                if corresponding_stream.type == type:
+                LOG.debug(f'{corresponding_stream} - {corresponding_stream.stream_type}')
+                if corresponding_stream.stream_type == stream_type:
                     return selected_stream
 
 
@@ -186,9 +169,9 @@ class Movie(object):
 
 
     def __separate_media_streams__(self) -> tuple[list[stream.Stream], list[stream.Stream], list[stream.Stream]]:
-        vid_list = [d for d in self.streams if d.type == constants.STREAM_TYPE_VIDEO]
-        aud_list = [d for d in self.streams if d.type == constants.STREAM_TYPE_AUDIO]
-        sub_list = [d for d in self.streams if d.type == constants.STREAM_TYPE_SUBTITLE]
+        vid_list = [d for d in self.streams if d.stream_type == constants.STREAM_TYPE_VIDEO]
+        aud_list = [d for d in self.streams if d.stream_type == constants.STREAM_TYPE_AUDIO]
+        sub_list = [d for d in self.streams if d.stream_type == constants.STREAM_TYPE_SUBTITLE]
         return vid_list, aud_list, sub_list
 
 
@@ -197,7 +180,7 @@ class Movie(object):
             _, file_extension = os.path.splitext(f)
             if file_extension in constants.VIDEO:
                 vid_path_source = os.path.join(self.movies_folder, f)
-                vid_path_target = os.path.join(self.movies_folder, f'{self._filename_prefix}-{f}')
+                vid_path_target = os.path.join(self.movies_folder, f'{self._filename_prefix}{file_extension}')
 
                 LOG.info(f'{vid_path_source = }')
                 LOG.debug(f'{vid_path_target = }')
@@ -214,6 +197,7 @@ class Movie(object):
                 ]
                 LOG.debug(f'{cmd_exec = }')
                 command.execute(cmd_exec)
+                files.restoring_target_filename_to_source(vid_path_target, vid_path_source)
 
 
     def __is_series__(self) -> int:
@@ -234,7 +218,7 @@ class Movie(object):
         old_path = os.path.join(self.movies_folder, file)
         new_path = os.path.join(self.movies_folder, new_file_name + file_extension)
         if do_rename:
-            os.rename(old_path, new_path)
+            files.rename(old_path, new_path)
 
 
     def rename_files(self, do_rename=True):
@@ -351,8 +335,7 @@ class Movie(object):
                 self.__extract_subtitle__(vid_path_source, sub_path_target)
 
                 if not keep_subtitles:
-                    vid_file_target = f'{filename}.no_subs{file_extension}'
-                    vid_path_target = os.path.join(self.movies_folder, vid_file_target)
+                    vid_path_target = os.path.join(self.movies_folder, f'{self._filename_prefix}.no_subs{file_extension}')
                     LOG.debug(f'{vid_path_target = }')
                     cmd_exec = [
                         self.ffmpeg_path,
@@ -361,8 +344,7 @@ class Movie(object):
                         vid_path_target
                     ]
                     command.execute(cmd_exec)
-                    LOG.debug(f'removing: {vid_path_source}')
-                    files.remove(vid_path_source)
+                    files.restoring_target_filename_to_source(vid_path_target, vid_path_source)
 
 
     def __get_file_encoding__(self, file: str) -> str:
@@ -575,7 +557,7 @@ class Movie(object):
                 event.text = clear_text
 
                 if (re.match(rf'^{frequent_style}', string=event.style)):
-                    event.style = 'Main' 
+                    event.style = 'Main'
                 else:
                     event.style = 'Signs'
 
@@ -594,7 +576,7 @@ class Movie(object):
             f_name, f_ext = os.path.splitext(f)
             if f_ext == constants.ASS:
                 sub_path_source = os.path.join(self.movies_folder, f)
-                sub_path_target = os.path.join(self.movies_folder, f'{f_name}.out{f_ext}')
+                sub_path_target = os.path.join(self.movies_folder, f'{f_name}.PURE{f_ext}')
                 LOG.debug(f'{sub_path_source = }')
                 LOG.debug(f'{sub_path_target = }')
                 self.__subtitle_purification__(sub_path_source, sub_path_target)
