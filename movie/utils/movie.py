@@ -15,15 +15,30 @@ from movie.utils import constants
 from movie.utils import generator
 from movie.utils import files
 from movie.utils.logging_config import LOG
+from movie.utils import stream
 
 
 class Movie(object):
+    ffmpeg_path: str
+    ffprobe_path: str
+    movies_folder: str
+    name_template: str
+    streams: list[stream.Stream]
+
     def __init__(self, ffmpeg_path: str, ffprobe_path: str, movies_folder: str, name_template: str) -> None:
         self._filename_prefix = generator.get_filename_prefix()
         self.ffmpeg_path = ffmpeg_path
         self.ffprobe_path = ffprobe_path
         self.movies_folder = movies_folder
         self.name_template = name_template
+        self.streams = None
+
+
+    def __set_streams__(self, stdout: str) -> None:
+        streams = stream.parse_ffprobe_output(stdout)
+        media_streams = stream.filter_media_streams(streams)
+        LOG.debug(f'{media_streams = }')
+        self.streams = media_streams
 
 
     def __get_video_streams_and_log_file__(self, video: str):
@@ -32,7 +47,7 @@ class Movie(object):
         dt_string = datetime.now().strftime('%Y.%m.%d - %H.%M.%S')
         LOG.debug(f'{dt_string = }')
 
-        cmd_exec = [self.ffprobe_path, vid_path_source]
+        cmd_exec = [self.ffprobe_path, '-show_streams', vid_path_source]
         stdout = command.execute(cmd_exec)
         log_data = stdout.stderr
 
@@ -50,68 +65,28 @@ class Movie(object):
                 fp.write('%s\n' % item)
         LOG.info(f'info in: {log_path_target}')
 
-        stream_pattern = re.compile(self.streams_pattern)
-        streams = [
-            {
-                'stream_id': int(stream_id),
-                'language': stream_lang,
-                'type': stream_type
-            }
-            for stream_id, stream_lang, stream_type in stream_pattern.findall(log_data)
-        ]
-        LOG.debug(f'all streams in {video}:')
-        for stream in streams:
-            stream['language'] = stream['language'][1:-1]
-            LOG.debug(f'{stream}')
-
-        stream_title_pattern = re.compile(constants.TITLE_STREAMS)
-        extended_streams = [
-            {
-                'stream_id': int(stream_id),
-                'language': stream_lang,
-                'type': stream_type,
-                'title': stream_title
-            }
-            for stream_id, stream_lang, stream_type, stream_title in stream_title_pattern.findall(log_data)
-        ]
-        LOG.debug('extended stream information:')
-        for extended_stream in extended_streams:
-            LOG.debug(f'{extended_stream}')       
-
-        media_streams = [stream for stream in streams if stream['type'] != 'Attachment']
-        LOG.debug('only media streams:')
-        for media_stream in media_streams:
-            LOG.debug(f'{media_stream}')
-
-        for idx in range(len(media_streams)):
-            for extended_stream in extended_streams:
-                if ('stream_id', idx) in extended_stream.items():
-                    media_streams[idx]['title'] = extended_stream['title']
-
-        LOG.info('extended media streams:')
-        for media_stream in media_streams:
-            LOG.info(f'{media_stream = }')
-        self.streams = media_streams
+        self.__set_streams__(stdout.stdout)
 
         return log_path_target
 
 
-    def __get_first_video_in_directory__(self):
+    def __get_first_video_in_directory__(self) -> (str | None):
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             _, file_extension = os.path.splitext(f)
-            if file_extension in [constants.MKV, constants.AVI]:
-                self.streams_pattern = constants.MKV_STREAMS
-                return f
-            if file_extension == constants.MP4:
-                self.streams_pattern = constants.MP4_STREAMS
+            if file_extension in constants.VIDEO:
                 return f
 
+        return None
 
-    def get_streams_and_log_file(self):
+
+    def get_streams_and_log_file(self) -> str:
         LOG.info(constants.LOG_FUNCTION_START.format(name = 'STREAMS AND LOG FILE'))
         first_video = self.__get_first_video_in_directory__()
         LOG.debug(f'{first_video = }')
-        return self.__get_video_streams_and_log_file__(first_video)
+        if first_video is None:
+            return None
+        else:
+            return self.__get_video_streams_and_log_file__(first_video)
 
 
     def remove_video(self, do_remove=True):
@@ -131,13 +106,14 @@ class Movie(object):
 
 
     def __get_first_stream_of_type__(self,  selected_streams: list[int], type: str) -> int:
+        stream_indices = {stream.index for stream in self.streams}
         LOG.debug(f'{type = }')
-        for i in range(len(selected_streams)):
-            for stream in self.streams:
-                if ('stream_id', selected_streams[i]) in stream.items():
-                    LOG.debug(f'{stream = }')
-                    if stream['type'] == type:
-                        return stream['stream_id']
+        for selected_stream in selected_streams:
+            if selected_stream in stream_indices:
+                corresponding_stream = next(stream for stream in self.streams if stream.index == selected_stream)
+                LOG.debug(f'{corresponding_stream} - {corresponding_stream.type}')
+                if corresponding_stream.type == type:
+                    return selected_stream
 
 
     def __get_default_streams__(self, selected_streams: list[int]) -> list[int]:
@@ -161,20 +137,22 @@ class Movie(object):
 
         default_streams = self.__get_default_streams__(selected_streams)
         streams_metadata = []
+        stream_indices = {stream.index for stream in self.streams}
         for i, selected_stream in enumerate(selected_streams):
-            for stream in self.streams:
-                if ('stream_id', selected_stream) in stream.items():
-                    LOG.debug(f'{stream = }')
-                    stream_metadata = [
-                        '-map', f'0:{stream["stream_id"]}',
-                    ]
-                    if selected_stream in default_streams:
-                        stream_metadata.extend(
-                            [f'-disposition:{i}', 'default']
-                        )
 
-                    LOG.debug(f'{stream_metadata = }')
-                    streams_metadata.extend(stream_metadata)
+            LOG.debug(f'{selected_stream = }')
+
+            if selected_stream in stream_indices:
+                stream_metadata = [
+                    '-map', f'0:{selected_stream}',
+                ]
+                if selected_stream in default_streams:
+                    stream_metadata.extend(
+                        [f'-disposition:{i}', 'default']
+                    )
+
+                LOG.debug(f'{stream_metadata = }')
+                streams_metadata.extend(stream_metadata)
 
         LOG.debug(f'{streams_metadata = }')
         self.__run_ffmpeg__(streams_metadata)
@@ -207,11 +185,11 @@ class Movie(object):
         self.__run_ffmpeg__(streams_metadata)
 
 
-    def __separate_media_streams__(self) -> tuple[list[dict], list[dict], list[dict]]:
-        video_list = [d for d in self.streams if d['type'] == constants.STREAM_TYPE_VIDEO]
-        audio_list = [d for d in self.streams if d['type'] == constants.STREAM_TYPE_AUDIO]
-        subtitle_list = [d for d in self.streams if d['type'] == constants.STREAM_TYPE_SUBTITLE]
-        return video_list, audio_list, subtitle_list
+    def __separate_media_streams__(self) -> tuple[list[stream.Stream], list[stream.Stream], list[stream.Stream]]:
+        vid_list = [d for d in self.streams if d.type == constants.STREAM_TYPE_VIDEO]
+        aud_list = [d for d in self.streams if d.type == constants.STREAM_TYPE_AUDIO]
+        sub_list = [d for d in self.streams if d.type == constants.STREAM_TYPE_SUBTITLE]
+        return vid_list, aud_list, sub_list
 
 
     def __run_ffmpeg__(self, streams: list[str]):

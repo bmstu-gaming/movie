@@ -21,11 +21,9 @@ JPG = '.jpg'
 JPEG = '.jpeg'
 IMAGE = [PNG, JPG, JPEG]
 
-MKV_STREAMS = r'Stream #[0-9]*:([0-9]*)(\([a-z]*\))?: ([a-z,A-Z]*)'
-MP4_STREAMS = r'Stream #[0-9]*:([0-9]*)\[[0-9]x[0-9]\](\([a-z]*\))?: ([a-z,A-Z]*)'
-TITLE_STREAMS = r'Stream #[0-9]*:([0-9]*)(\([a-z]*\)): ([a-z,A-Z]*):(?<=[:]).*(?=[\n])\s+Metadata:\n\s+title\s+: (.*(?=[\n]))'
 NAME_TEMPLATE_VERIFICATION_REGEX = r'^[^\/\\\:\*\?\"\<\>\|]+$'
+STREAM = r'\[STREAM\](.*?)\[/STREAM\]'
 
-STREAM_TYPE_VIDEO = 'Video'
-STREAM_TYPE_AUDIO = 'Audio'
-STREAM_TYPE_SUBTITLE = 'Subtitle'
+STREAM_TYPE_VIDEO = 'video'
+STREAM_TYPE_AUDIO = 'audio'
+STREAM_TYPE_SUBTITLE = 'subtitle'
