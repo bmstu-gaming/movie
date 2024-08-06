@@ -29,3 +29,26 @@ LOG_CONFIG = {
 }
 logging.config.dictConfig(LOG_CONFIG)
 LOG = logging.getLogger(__name__)
+
+
+class Logger:
+    def __init__(self, logger):
+        self.logger = logger
+
+    def log_msg(self, message, level=logging.DEBUG):
+        if level == logging.DEBUG:
+            self.logger.debug(message)
+        elif level == logging.INFO:
+            self.logger.info(message)
+        elif level == logging.WARNING:
+            self.logger.warning(message)
+        elif level == logging.ERROR:
+            self.logger.error(message)
+        elif level == logging.CRITICAL:
+            self.logger.critical(message)
+
+        if level >= logging.INFO:
+            print(message)
+
+
+log = Logger(LOG)

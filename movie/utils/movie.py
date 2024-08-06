@@ -1,6 +1,7 @@
 import codecs
 import collections
 from datetime import datetime
+import logging
 import os
 import re
 
@@ -14,7 +15,7 @@ from movie.utils import command
 from movie.utils import constants
 from movie.utils import generator
 from movie.utils import files
-from movie.utils.logging_config import LOG
+from movie.utils.logging_config import log
 from movie.utils import stream
 
 
@@ -37,15 +38,15 @@ class Movie(object):
     def __set_streams__(self, stdout: str) -> None:
         streams = stream.parse_ffprobe_output(stdout)
         media_streams = stream.filter_media_streams(streams)
-        LOG.debug(f'{media_streams = }')
+        log.log_msg(f'{media_streams = }')
         self.streams = media_streams
 
 
     def __get_video_streams_and_log_file__(self, video: str):
         vid_path_source = os.path.join(self.movies_folder, video)
-        LOG.debug(f'{vid_path_source = }')
+        log.log_msg(f'{vid_path_source = }')
         dt_string = datetime.now().strftime('%Y.%m.%d - %H.%M.%S')
-        LOG.debug(f'{dt_string = }')
+        log.log_msg(f'{dt_string = }')
 
         cmd_exec = [self.ffprobe_path, '-show_streams', vid_path_source]
         stdout = command.execute(cmd_exec)
@@ -62,8 +63,8 @@ class Movie(object):
 
         with open(log_path_target, 'w', encoding='utf-8') as fp:
             for item in log_info:
-                fp.write('%s\n' % item)
-        LOG.info(f'info in: {log_path_target}')
+                fp.write(f'{item}\n')
+        log.log_msg(f'info in: {log_path_target}', logging.INFO)
 
         self.__set_streams__(stdout.stdout)
 
@@ -80,9 +81,9 @@ class Movie(object):
 
 
     def get_streams_and_log_file(self) -> str:
-        LOG.info(constants.LOG_FUNCTION_START.format(name = 'STREAMS AND LOG FILE'))
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = 'STREAMS AND LOG FILE'))
         first_video = self.__get_first_video_in_directory__()
-        LOG.debug(f'{first_video = }')
+        log.log_msg(f'{first_video = }')
         if first_video is None:
             return None
         return self.__get_video_streams_and_log_file__(first_video)
@@ -90,41 +91,39 @@ class Movie(object):
 
     def __get_first_stream_of_type__(self,  selected_streams: list[int], stream_type: str) -> int:
         stream_indices = {stream.index for stream in self.streams}
-        LOG.debug(f'{stream_type = }')
+        log.log_msg(f'{stream_type = }')
         for selected_stream in selected_streams:
             if selected_stream in stream_indices:
                 corresponding_stream = next(stream for stream in self.streams if stream.index == selected_stream)
-                LOG.debug(f'{corresponding_stream} - {corresponding_stream.stream_type}')
+                log.log_msg(f'{corresponding_stream} - {corresponding_stream.stream_type}')
                 if corresponding_stream.stream_type == stream_type:
                     return selected_stream
 
 
     def __get_default_streams__(self, selected_streams: list[int]) -> list[int]:
-        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'GET DEFAULT SELECTED STREAMS'))
-        LOG.debug(f'{selected_streams = }')
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = 'GET DEFAULT SELECTED STREAMS'))
+        log.log_msg(f'{selected_streams = }')
 
         default_streams = []
         default_stream_subtitle = self.__get_first_stream_of_type__(selected_streams, constants.STREAM_TYPE_SUBTITLE)
         default_stream_audio = self.__get_first_stream_of_type__(selected_streams, constants.STREAM_TYPE_AUDIO)
         default_streams = [default_stream_subtitle, default_stream_audio]
-        LOG.debug(f'default stream {constants.STREAM_TYPE_SUBTITLE}: {default_stream_subtitle}')
-        LOG.debug(f'default stream {constants.STREAM_TYPE_AUDIO}: {default_stream_audio}')
-        LOG.debug(f'{default_streams = }')
-        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'GET DEFAULT SELECTED STREAMS'))
+        log.log_msg(f'default stream {constants.STREAM_TYPE_SUBTITLE}: {default_stream_subtitle}')
+        log.log_msg(f'default stream {constants.STREAM_TYPE_AUDIO}: {default_stream_audio}')
+        log.log_msg(f'{default_streams = }')
+        log.log_msg(constants.LOG_FUNCTION_END.format(name = 'GET DEFAULT SELECTED STREAMS'))
         return default_streams
 
 
     def process_streams(self, selected_streams: list[int]):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS'))
-        LOG.debug(f'{selected_streams = }')
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS'))
+        log.log_msg(f'{selected_streams = }')
 
         default_streams = self.__get_default_streams__(selected_streams)
         streams_metadata = []
         stream_indices = {stream.index for stream in self.streams}
         for i, selected_stream in enumerate(selected_streams):
-
-            LOG.debug(f'{selected_stream = }')
-
+            log.log_msg(f'{selected_stream = }')
             if selected_stream in stream_indices:
                 stream_metadata = [
                     '-map', f'0:{selected_stream}',
@@ -134,24 +133,24 @@ class Movie(object):
                         [f'-disposition:{i}', 'default']
                     )
 
-                LOG.debug(f'{stream_metadata = }')
+                log.log_msg(f'{stream_metadata = }')
                 streams_metadata.extend(stream_metadata)
 
-        LOG.debug(f'{streams_metadata = }')
+        log.log_msg(f'{streams_metadata = }')
         self.__run_ffmpeg__(streams_metadata)
 
 
     def process_streams_with_language(self, streams_languages: dict):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS WITH LANGUAGE'))
-        LOG.debug(f'{streams_languages = }')
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS WITH LANGUAGE'))
+        log.log_msg(f'{streams_languages = }')
 
         default_streams = self.__get_default_streams__(list(streams_languages.keys()))
 
         streams_metadata = []
         for i, key in enumerate(streams_languages):
-            LOG.debug(f'{i = }')
-            LOG.debug(f'{key = }')
-            LOG.debug(f'{streams_languages[key] = }')
+            log.log_msg(f'{i = }')
+            log.log_msg(f'{key = }')
+            log.log_msg(f'{streams_languages[key] = }')
             stream_metadata = [
                 '-map', f'0:{key}',
                 f'-metadata:s:{i}', f'language={streams_languages[key]}',
@@ -161,10 +160,10 @@ class Movie(object):
                     [f'-disposition:{i}', 'default',]
                 )
 
-            LOG.debug(f'{stream_metadata = }')
+            log.log_msg(f'{stream_metadata = }')
             streams_metadata.extend(stream_metadata)
 
-        LOG.debug(f'{streams_metadata = }')
+        log.log_msg(f'{streams_metadata = }')
         self.__run_ffmpeg__(streams_metadata)
 
 
@@ -182,11 +181,8 @@ class Movie(object):
                 vid_path_source = os.path.join(self.movies_folder, f)
                 vid_path_target = os.path.join(self.movies_folder, f'{self._filename_prefix}{file_extension}')
 
-                LOG.info(f'{vid_path_source = }')
-                LOG.debug(f'{vid_path_target = }')
-
-                print(f'folder: {self.movies_folder}')
-                print(f'{f} -> {self._filename_prefix}-{f}')
+                log.log_msg(f'{f}', logging.INFO)
+                log.log_msg(f'{vid_path_target = }')
 
                 cmd_exec = [
                     self.ffmpeg_path,
@@ -195,7 +191,7 @@ class Movie(object):
                     *streams,
                     vid_path_target
                 ]
-                LOG.debug(f'{cmd_exec = }')
+                log.log_msg(f'{cmd_exec = }')
                 command.execute(cmd_exec)
                 files.restoring_target_filename_to_source(vid_path_target, vid_path_source)
 
@@ -206,15 +202,15 @@ class Movie(object):
             _, file_extension = os.path.splitext(f)
             if file_extension in constants.VIDEO:
                 video_count += 1
-        LOG.debug(f'{video_count = }')
+        log.log_msg(f'{video_count = }')
         return video_count
 
 
     def __rename__(self, file: str, template: str, idx: int, do_rename=True):
         file_name, file_extension = os.path.splitext(file)
         new_file_name = template.format(episode_idx=idx)
-        LOG.debug(f'old_file: {file_name}{file_extension}')
-        LOG.info(f'new_file: {new_file_name}{file_extension}')
+        log.log_msg(f'old_file: {file_name}{file_extension}')
+        log.log_msg(f'new_file: {new_file_name}{file_extension}')
         old_path = os.path.join(self.movies_folder, file)
         new_path = os.path.join(self.movies_folder, new_file_name + file_extension)
         if do_rename:
@@ -222,14 +218,14 @@ class Movie(object):
 
 
     def rename_files(self, do_rename=True):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = 'RENAMING FILES'))
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = 'RENAMING FILES'))
         isSeries = True
         if self.__is_series__() == 1:
             isSeries = False
             template_vid = self.name_template
             template_sub = self.name_template + '.RUS'
             template_img = self.name_template
-        LOG.debug(f'{isSeries = }')
+        log.log_msg(f'{isSeries = }')
 
         base_idx = 1
         sub_idx = base_idx
@@ -261,11 +257,11 @@ class Movie(object):
 
 
     def subs_convert_srt_to_ass(self):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = f'convert {constants.STREAM_TYPE_SUBTITLE} {constants.SRT} -> {constants.ASS}'))
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = f'convert {constants.STREAM_TYPE_SUBTITLE} {constants.SRT} -> {constants.ASS}'))
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             filename, file_extension = os.path.splitext(f)
             if file_extension == constants.SRT:
-                LOG.info(f'{filename} -> .ass ')
+                log.log_msg(f'{filename} -> .ass ')
 
                 sub_path_source = os.path.join(self.movies_folder, f)
                 sub_path_target = os.path.join(self.movies_folder, f'{filename}.ass')
@@ -273,7 +269,7 @@ class Movie(object):
                 subs = pysubs2.load(sub_path_source, encoding=self.__get_file_encoding__(sub_path_source))
                 subs.save(sub_path_target, encoding='utf-8')
                 sub_srt_path = os.path.join(self.movies_folder, filename + file_extension)
-                LOG.debug(f'removing: {sub_srt_path}')
+
                 files.remove(sub_srt_path)
 
 
@@ -290,26 +286,24 @@ class Movie(object):
         sub_file_source.close()
 
         sorted_style_occurrences = dict(sorted(style_occurrences.items(), key=lambda x: x[1], reverse=True))
-        LOG.debug(f'{sorted_style_occurrences = }')
+        log.log_msg(f'{sorted_style_occurrences = }')
 
         for key in sorted_style_occurrences:
-            LOG.info(f'{key}: {sorted_style_occurrences[key]}')
-            print(f'{key}: {sorted_style_occurrences[key]}')
+            log.log_msg(f'{key}: {sorted_style_occurrences[key]}', logging.INFO)
 
         return sorted_style_occurrences
 
 
     def get_sub_info(self):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = f'{constants.ASS}-SUBTITLE INFO'))
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = f'{constants.ASS}-SUBTITLE INFO'))
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             _, file_extension = os.path.splitext(f)
             if file_extension == constants.ASS:
                 first_subtitle = f
-                LOG.debug(f'{first_subtitle = }')
+                log.log_msg(f'{first_subtitle = }')
                 self.style_occurrences = self.__get_styles__(f)
                 return
-        LOG.info('There is no .ass subtitles in folder')
-        print('There is no .ass subtitles in folder')
+        log.log_msg('There is no .ass subtitles in folder', logging.WARNING)
 
 
     def __extract_subtitle__(self, vid_path_source: str, sub_path_target: str):
@@ -323,20 +317,20 @@ class Movie(object):
 
 
     def extract_subtitle(self, keep_subtitles=False):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = f'EXTRACT {constants.STREAM_TYPE_SUBTITLE} FROM {constants.STREAM_TYPE_VIDEO}'))
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = f'EXTRACT {constants.STREAM_TYPE_SUBTITLE} FROM {constants.STREAM_TYPE_VIDEO}'))
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             filename, file_extension = os.path.splitext(f)
             if file_extension in constants.VIDEO:
                 vid_path_source = os.path.join(self.movies_folder, f)
                 sub_path_target = os.path.join(self.movies_folder, filename + constants.SRT)
-                LOG.debug(f'{vid_path_source = }')
-                LOG.info(f'{sub_path_target = }')
-                print(f'{sub_path_target = }')
+                log.log_msg(f'{f}', logging.INFO)
+                log.log_msg(f'{sub_path_target = }')
+
                 self.__extract_subtitle__(vid_path_source, sub_path_target)
 
                 if not keep_subtitles:
                     vid_path_target = os.path.join(self.movies_folder, f'{self._filename_prefix}.no_subs{file_extension}')
-                    LOG.debug(f'{vid_path_target = }')
+                    log.log_msg(f'{vid_path_target = }')
                     cmd_exec = [
                         self.ffmpeg_path,
                         '-i', vid_path_source,
@@ -361,11 +355,11 @@ class Movie(object):
         img = Image.open(img_path)
 
         original_width, original_height = img.size
-        LOG.debug(f'source: {original_height}x{original_width}')
+        log.log_msg(f'source: {original_height}x{original_width}')
 
         target_width = 380
         target_heigth = int(original_height * (target_width / original_width))
-        LOG.debug(f'target: {target_heigth}x{target_width}')
+        log.log_msg(f'target: {target_heigth}x{target_width}')
 
         resized_img = img.resize((target_width, target_heigth))
         img_resized_filename = f'{f_name}.resized{f_ext}'
@@ -374,7 +368,7 @@ class Movie(object):
         resized_img.save(img_resized_path)
 
         img.close()
-        LOG.info(f'removing: {img_path}')
+
         files.remove(img_path)
 
         return img_resized_filename
@@ -411,9 +405,8 @@ class Movie(object):
 
         img_preview.close()
         img_bg.close()
-        LOG.info(f'removing: {preview_image_path}')
+
         files.remove(preview_image_path)
-        LOG.info(f'removing: {bg_image_path}')
         files.remove(bg_image_path)
 
         return img_preview_filename
@@ -428,11 +421,11 @@ class Movie(object):
         for i in range(1, self.__is_series__()+1):
             template = f_name + '.copy.{idx:02d}' + f_ext
             copy_filename = template.format(idx=i)
-            LOG.debug(f'{copy_filename = }')
+            log.log_msg(f'{copy_filename = }')
             copy_path = os.path.join(self.movies_folder, copy_filename)
             image.save(copy_path)
         image.close()
-        LOG.info(f'removing: {img_path}')
+
         files.remove(img_path)
 
 
@@ -450,22 +443,22 @@ class Movie(object):
         img.save(img_target_path)
 
         img.close
-        LOG.info(f'removing: {img_path}')
+
         files.remove(img_path)
 
 
     def preview_generate(self):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = 'PREVIEW GENERATE'))
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = 'PREVIEW GENERATE'))
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             _, f_ext = os.path.splitext(f)
             if f_ext in constants.IMAGE:
-                LOG.debug(f'{f = }')
+                log.log_msg(f'{f = }')
                 img_file_resized = self.__get_resized_preview_image__(f)
-                LOG.debug(f'{img_file_resized = }')
+                log.log_msg(f'{img_file_resized = }')
                 img_bg_file = self.__get_background_image__()
-                LOG.debug(f'{img_bg_file = }')
+                log.log_msg(f'{img_bg_file = }')
                 img_preview = self.__get_preview_with_background__(img_file_resized, img_bg_file)
-                LOG.debug(f'{img_preview = }')
+                log.log_msg(f'{img_preview = }')
                 self.__copy_preview_image__(img_preview)
 
         if self.__is_series__() == 1:
@@ -476,8 +469,8 @@ class Movie(object):
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             _, f_ext = os.path.splitext(f)
             if f_ext in constants.IMAGE:
-                LOG.debug(f'{f = }')
-                LOG.debug(f'{preview_idx = }')
+                log.log_msg(f'{f = }')
+                log.log_msg(f'{preview_idx = }')
                 self.__write_number__(f, preview_idx)
                 preview_idx += 1
 
@@ -493,7 +486,7 @@ class Movie(object):
                 'ScriptType': 'v4.00+',
             }
             doc.info = ass.ScriptInfoSection('Script Info', collections.OrderedDict(script_info_dict))
-            LOG.debug(f'{doc.info = }')
+            log.log_msg(f'{doc.info = }')
 
             main_subtitle = ass.line.Style(
                 name='Main',
@@ -547,10 +540,10 @@ class Movie(object):
             )
             subs = [main_subtitle, signs_subtitle]
             doc.styles = ass.section.StylesSection('V4+ Styles', subs)
-            LOG.debug(f'{doc.styles = }')
+            log.log_msg(f'{doc.styles = }')
 
             frequent_style = str(next(iter(self.style_occurrences)))
-            LOG.debug(f'{frequent_style = }')
+            log.log_msg(f'{frequent_style = }')
 
             for event in doc.events:
                 clear_text = re.sub(r'{[^}]*}', '', event.text).strip()
@@ -566,21 +559,20 @@ class Movie(object):
             sub_file_target.close()
         sub_file_source.close()
 
-        LOG.info(f'removing: {sub_path_source}')
         files.remove(sub_path_source)
 
 
     def ass_subtitle_purification(self):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = f'{constants.STREAM_TYPE_SUBTITLE} PURIFACATION'))
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = f'{constants.STREAM_TYPE_SUBTITLE} PURIFACATION'))
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             f_name, f_ext = os.path.splitext(f)
             if f_ext == constants.ASS:
                 sub_path_source = os.path.join(self.movies_folder, f)
                 sub_path_target = os.path.join(self.movies_folder, f'{f_name}.PURE{f_ext}')
-                LOG.debug(f'{sub_path_source = }')
-                LOG.debug(f'{sub_path_target = }')
+                log.log_msg(f'{sub_path_source = }')
+                log.log_msg(f'{sub_path_target = }')
                 self.__subtitle_purification__(sub_path_source, sub_path_target)
-        LOG.info(constants.LOG_FUNCTION_END.format(name = f'{constants.STREAM_TYPE_SUBTITLE} PURIFACATION'))
+        log.log_msg(constants.LOG_FUNCTION_END.format(name = f'{constants.STREAM_TYPE_SUBTITLE} PURIFACATION'))
 
 
     def __subtitle_translation__(self, sub_path_source, sub_path_target):
@@ -596,18 +588,17 @@ class Movie(object):
             sub_file_target.close()
         sub_file_source.close()
 
-        LOG.info(f'removing: {sub_path_source}')
         files.remove(sub_path_source)
 
 
     def ass_subtitle_translation(self):
-        LOG.info(constants.LOG_FUNCTION_START.format(name = f'{constants.STREAM_TYPE_SUBTITLE} TRANSLATION'))
+        log.log_msg(constants.LOG_FUNCTION_START.format(name = f'{constants.STREAM_TYPE_SUBTITLE} TRANSLATION'))
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             f_name, f_ext = os.path.splitext(f)
             if f_ext == constants.ASS:
                 sub_path_source = os.path.join(self.movies_folder, f)
                 sub_path_target = os.path.join(self.movies_folder, f'{f_name}.translation-out{f_ext}')
-                LOG.debug(f'{sub_path_source = }')
-                LOG.debug(f'{sub_path_target = }')
+                log.log_msg(f'{sub_path_source = }')
+                log.log_msg(f'{sub_path_target = }')
                 self.__subtitle_translation__(sub_path_source, sub_path_target)
-        LOG.info(constants.LOG_FUNCTION_END.format(name = f'{constants.STREAM_TYPE_SUBTITLE} TRANSLATION'))
+        log.log_msg(constants.LOG_FUNCTION_END.format(name = f'{constants.STREAM_TYPE_SUBTITLE} TRANSLATION'))
