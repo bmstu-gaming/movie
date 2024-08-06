@@ -20,7 +20,7 @@ def common_call(object: movie.Movie, function):
 
 def streams_info(object: movie.Movie):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
-    print_streams(pu, object, print_log_file=True)
+    print_streams(pu, object)
 
     _function_end(pu)
 
@@ -31,14 +31,12 @@ def color_print_streams(pu: consolemenu.PromptUtils, title: str, streams: list[s
         pu.println(f'{colors.color(stream, fg=f"{color}")}')
 
 
-def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie, print_log_file=False) -> (str | None):
+def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie) -> (str | None):
     logs_file_path = object.get_streams_and_log_file()
     if logs_file_path is None:
         pu.println(f'There is no video file in movie folder: {object.movies_folder}')
         return None
 
-    if print_log_file:
-        pu.println(f'{colors.color(f"ffprobe work logs in: {logs_file_path}", fg=f"#FFFFFF")}')
     video_streams, audio_streams, subtitle_streams = object.__separate_media_streams__()
     pu.println(f'{colors.color("#: (Language) Title", fg=f"#FFFFFF")}')
     color_print_streams(pu, 'Video streams', video_streams, '#FFFF00')

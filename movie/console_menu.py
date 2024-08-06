@@ -2,15 +2,16 @@ import consolemenu
 
 from movie.utils import config
 from movie.utils import constants
-from movie.utils.logging_config import LOG
+from movie.utils.logging_config import log
 from movie.utils import movie
 from movie import scenarios
 
 
 def main_menu():
-    LOG.info('')
-    LOG.info('                      PROGRAM START')
-    LOG.info('')
+    log.log_msg('')
+    log.log_msg('                      PROGRAM START')
+    log.log_msg('')
+
     movie_obj = config.apply_config()
 
     menu = consolemenu.ConsoleMenu("Main menu", prologue_text=(f'logs in: {constants.LOG_FILE}'))
