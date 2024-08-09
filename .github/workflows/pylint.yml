@@ -2,7 +2,7 @@ name: Pylint
 
 on:
   pull_request:
-    branches: [ "main" ]
+    types: [opened, edited]
 
 jobs:
   build:
