@@ -25,7 +25,7 @@ class Stream:
     def __repr__(self):
         title = self.tags.get('title', f'Track {self.index}')
         return f'{self.index}: ({self.tags.get("language")}) {title}'
-    
+
     @property
     def stream_type(self):
         return self._codec_type

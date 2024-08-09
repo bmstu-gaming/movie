@@ -32,7 +32,7 @@ def _config_validate(movie_config: configparser.ConfigParser) -> Tuple[dict, boo
     result, message = _verification_ffmpeg_path(ffmpeg_path)
     is_valid = is_valid and result
     config_statuses['FFMPEG_PATH'] = f'"{ffmpeg_path}" {constants.CHECK if result else constants.CROSS} {message}'
-    
+
     result, message = _verification_ffprobe_path(ffprobe_path)
     is_valid = is_valid and result
     config_statuses['FFPROBE_PATH'] = f'"{ffprobe_path}" {constants.CHECK if result else constants.CROSS} {message}'

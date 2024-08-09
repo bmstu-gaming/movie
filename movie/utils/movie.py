@@ -19,12 +19,13 @@ from movie.utils.logging_config import LOG
 from movie.utils import stream
 
 
-class Movie(object):
+class Movie():
     ffmpeg_path: str
     ffprobe_path: str
     movies_folder: str
     name_template: str
     streams: list[stream.Stream]
+    style_occurrences: dict
 
     def __init__(self, ffmpeg_path: str, ffprobe_path: str, movies_folder: str, name_template: str) -> None:
         self._filename_prefix = generator.get_filename_prefix()
@@ -33,6 +34,7 @@ class Movie(object):
         self.movies_folder = movies_folder
         self.name_template = name_template
         self.streams = None
+        self.style_occurrences = None
 
 
     def __set_streams__(self, stdout: str) -> None:
@@ -98,6 +100,7 @@ class Movie(object):
                 LOG.debug(f'{corresponding_stream} - {corresponding_stream.stream_type}')
                 if corresponding_stream.stream_type == stream_type:
                     return selected_stream
+        return None
 
 
     def __get_default_streams__(self, selected_streams: list[int]) -> list[int]:
@@ -219,13 +222,13 @@ class Movie(object):
 
     def rename_files(self, do_rename=True):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'RENAMING FILES'))
-        isSeries = True
+        is_series = True
         if self.__is_series__() == 1:
-            isSeries = False
+            is_series = False
             template_vid = self.name_template
             template_sub = self.name_template + '.RUS'
             template_img = self.name_template
-        LOG.debug(f'{isSeries = }')
+        LOG.debug(f'{is_series = }')
 
         base_idx = 1
         sub_idx = base_idx
@@ -235,21 +238,21 @@ class Movie(object):
             _, file_extension = os.path.splitext(f)
 
             if file_extension in constants.VIDEO:
-                if isSeries:
+                if is_series:
                     template_vid = self.name_template + ".E{episode_idx:02d}"
 
                 self.__rename__(f, template_vid, vid_idx, do_rename=do_rename)
                 vid_idx += 1
 
             if file_extension in constants.SUBTITLE:
-                if isSeries:
+                if is_series:
                     template_sub = self.name_template + ".E{episode_idx:02d}.RUS"
 
                 self.__rename__(f, template_sub, sub_idx, do_rename=do_rename)
                 sub_idx += 1
 
             if file_extension in constants.IMAGE:
-                if isSeries:
+                if is_series:
                     template_img = self.name_template + ".E{episode_idx:02d}"
 
                 self.__rename__(f, template_img, img_idx, do_rename=do_rename)
@@ -549,7 +552,7 @@ class Movie(object):
                 clear_text = re.sub(r'{[^}]*}', '', event.text).strip()
                 event.text = clear_text
 
-                if (re.match(rf'^{frequent_style}', string=event.style)):
+                if re.match(rf'^{frequent_style}', string=event.style):
                     event.style = 'Main'
                 else:
                     event.style = 'Signs'

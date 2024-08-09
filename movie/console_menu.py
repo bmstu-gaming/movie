@@ -14,7 +14,7 @@ def main_menu():
 
     movie_obj = config.apply_config()
 
-    menu = consolemenu.ConsoleMenu("Main menu", prologue_text=(f'logs in: {constants.LOG_FILE}'))
+    menu = consolemenu.ConsoleMenu("Main menu", prologue_text=f'logs in: {constants.LOG_FILE}')
 
     item1 = consolemenu.items.FunctionItem("Update config", scenarios.common_call, args=[movie_obj, config.update_config])
 
