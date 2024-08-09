@@ -2,15 +2,15 @@ import consolemenu
 
 from movie.utils import config
 from movie.utils import constants
-from movie.utils.logging_config import log
+from movie.utils.logging_config import LOG
 from movie.utils import movie
 from movie import scenarios
 
 
 def main_menu():
-    log.log_msg('')
-    log.log_msg('                      PROGRAM START')
-    log.log_msg('')
+    LOG.debug('')
+    LOG.debug('                      PROGRAM START')
+    LOG.debug('')
 
     movie_obj = config.apply_config()
 

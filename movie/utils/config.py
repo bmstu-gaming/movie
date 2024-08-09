@@ -1,5 +1,4 @@
 import configparser
-import logging
 import os
 import re
 import sys
@@ -7,7 +6,7 @@ from typing import Tuple
 
 from movie.utils import command
 from movie.utils import constants
-from movie.utils.logging_config import log
+from movie.utils.logging_config import LOG
 from movie.utils.movie import Movie
 
 
@@ -106,11 +105,11 @@ def _load_and_validate_config(config_path: str = constants.CONFIG_PATH) -> confi
     config_statuses, is_valid = _config_validate(config)
 
     for key, message in config_statuses.items():
-        log.log_msg(f'{key}: {message}')
+        LOG.debug(f'{key}: {message}')
 
     if not is_valid:
-        log.log_msg(f'logs in {constants.LOG_FILE}', logging.INFO)
-        log.log_msg(f'Config not valid. Program exit. {constants.CROSS}', logging.ERROR)
+        LOG.info(f'logs in {constants.LOG_FILE}')
+        LOG.error(f'Config not valid. Program exit. {constants.CROSS}')
         sys.exit(1)
 
     return config
