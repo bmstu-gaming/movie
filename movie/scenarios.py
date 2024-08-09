@@ -1,4 +1,5 @@
 import re
+from typing import Union
 
 import colors
 import consolemenu
@@ -6,6 +7,7 @@ import consolemenu
 from movie.utils import movie
 from movie.utils import notation
 from movie.utils import stream
+
 
 def _function_end(pu: consolemenu.PromptUtils) -> None:
     pu.println('\nProcess completed successfully!')
@@ -31,7 +33,7 @@ def color_print_streams(pu: consolemenu.PromptUtils, title: str, streams: list[s
         pu.println(f'{colors.color(stream, fg=f"{color}")}')
 
 
-def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie) -> (str | None):
+def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie) -> Union[str, None]:
     logs_file_path = object.get_streams_and_log_file()
     if logs_file_path is None:
         pu.println(f'There is no video file in movie folder: {object.movies_folder}')
@@ -44,7 +46,7 @@ def print_streams(pu: consolemenu.PromptUtils, object: movie.Movie) -> (str | No
     color_print_streams(pu, 'Subtitle streams', subtitle_streams, '#FF00FF')
     return 'OK'
 
-def get_input_selected_streams(pu: consolemenu.PromptUtils, object: movie.Movie) -> (list[int] | None):
+def get_input_selected_streams(pu: consolemenu.PromptUtils, object: movie.Movie) -> Union[list[int], None]:
     if print_streams(pu, object) is None:
         return None
 

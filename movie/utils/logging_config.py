@@ -7,48 +7,34 @@ from movie.utils import constants
 LOG_CONFIG = {
     'version': 1,
     'formatters': {
-        'default': {
+        'file_log': {
             'format': '%(asctime)s [%(levelname)s]\t%(message)s'
-        }
+        },
+        'console_log': {
+            'format': '%(message)s'
+        },
     },
     'handlers': {
         'file': {
             'class': 'logging.FileHandler',
             'filename': constants.LOG_FILE,
             'encoding': 'utf-8',
-            'formatter': 'default'
-        }
+            'formatter': 'file_log',
+            'level': logging.DEBUG,
+        },
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'console_log',
+            'level': logging.INFO,
+        },
     },
     'loggers': {
         __name__: {
             'level': logging.DEBUG,
-            'handlers': ['file'],
+            'handlers': ['file', 'console'],
             'propagate': False
         }
     }
 }
 logging.config.dictConfig(LOG_CONFIG)
 LOG = logging.getLogger(__name__)
-
-
-class Logger:
-    def __init__(self, logger):
-        self.logger = logger
-
-    def log_msg(self, message, level=logging.DEBUG):
-        if level == logging.DEBUG:
-            self.logger.debug(message)
-        elif level == logging.INFO:
-            self.logger.info(message)
-        elif level == logging.WARNING:
-            self.logger.warning(message)
-        elif level == logging.ERROR:
-            self.logger.error(message)
-        elif level == logging.CRITICAL:
-            self.logger.critical(message)
-
-        if level >= logging.INFO:
-            print(message)
-
-
-log = Logger(LOG)

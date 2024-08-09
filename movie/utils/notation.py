@@ -1,7 +1,5 @@
-import logging
-
 from movie.utils import constants
-from movie.utils.logging_config import log
+from movie.utils.logging_config import LOG
 
 def validation(input_str: str) -> bool:
     numbers = set('0123456789')
@@ -15,8 +13,8 @@ def validation(input_str: str) -> bool:
 
 
 def recognition(input_str: str) -> list[int]:
-    log.log_msg(constants.LOG_FUNCTION_START.format(name = 'notation recognition'))
-    log.log_msg(f'{input_str = }')
+    LOG.debug(constants.LOG_FUNCTION_START.format(name = 'notation recognition'))
+    LOG.debug(f'{input_str = }')
 
     numbers = []
     try:
@@ -28,8 +26,8 @@ def recognition(input_str: str) -> list[int]:
             else:
                 numbers.append(int(num))
         for num in numbers:
-            log.log_msg(f'{num = }')
+            LOG.debug(f'{num = }')
     except Exception as e:
-        log.log_msg(f'An error occurred: {e}', logging.ERROR)
-    log.log_msg(constants.LOG_FUNCTION_END.format(name = 'notation recognition'))
+        LOG.error(f'An error occurred: {e}')
+    LOG.debug(constants.LOG_FUNCTION_END.format(name = 'notation recognition'))
     return numbers
