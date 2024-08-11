@@ -2,6 +2,7 @@ import configparser
 import os
 import re
 import sys
+from typing import List
 from typing import Tuple
 
 from movie.utils import command
@@ -16,7 +17,7 @@ def _config_load(config_path: str = constants.CONFIG_PATH) -> configparser.Confi
     return config
 
 
-def _config_get_values(movie_config: configparser.ConfigParser) -> Tuple[list[str]]:
+def _config_get_values(movie_config: configparser.ConfigParser) -> Tuple[List[str]]:
     return (str(movie_config.get('Config', 'FFMPEG_PATH', fallback=None)),
             str(movie_config.get('Config', 'FFPROBE_PATH', fallback=None)),
             str(movie_config.get('Config', 'MOVIES_FOLDER', fallback=None)),
@@ -32,7 +33,7 @@ def _config_validate(movie_config: configparser.ConfigParser) -> Tuple[dict, boo
     result, message = _verification_ffmpeg_path(ffmpeg_path)
     is_valid = is_valid and result
     config_statuses['FFMPEG_PATH'] = f'"{ffmpeg_path}" {constants.CHECK if result else constants.CROSS} {message}'
-    
+
     result, message = _verification_ffprobe_path(ffprobe_path)
     is_valid = is_valid and result
     config_statuses['FFPROBE_PATH'] = f'"{ffprobe_path}" {constants.CHECK if result else constants.CROSS} {message}'

@@ -1,3 +1,5 @@
+from typing import List
+
 from movie.utils import constants
 from movie.utils.logging_config import LOG
 
@@ -12,7 +14,7 @@ def validation(input_str: str) -> bool:
     return True
 
 
-def recognition(input_str: str) -> list[int]:
+def recognition(input_str: str) -> List[int]:
     LOG.debug(constants.LOG_FUNCTION_START.format(name = 'notation recognition'))
     LOG.debug(f'{input_str = }')
 
