@@ -1,4 +1,5 @@
 import re
+from typing import List
 
 from movie.utils import constants
 
@@ -31,7 +32,7 @@ class Stream:
         return self._codec_type
 
 
-def parse_ffprobe_output(output: str) -> list[Stream]:
+def parse_ffprobe_output(output: str) -> List[Stream]:
     stream_blocks = re.findall(constants.STREAM, output, re.DOTALL)
 
     streams = []
@@ -41,5 +42,5 @@ def parse_ffprobe_output(output: str) -> list[Stream]:
     return streams
 
 
-def filter_media_streams(streams: list[Stream]) -> list[Stream]:
+def filter_media_streams(streams: List[Stream]) -> List[Stream]:
     return [stream for stream in streams if stream.stream_type in ['video', 'audio', 'subtitle']]

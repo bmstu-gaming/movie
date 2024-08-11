@@ -1,10 +1,11 @@
 import subprocess
+from typing import List
 
 from movie.utils import constants
 from movie.utils.logging_config import LOG
 
 
-def execute(command: list[str]) -> subprocess.CompletedProcess[str]:
+def execute(command: List[str]) -> subprocess.CompletedProcess:
     LOG.debug(constants.LOG_FUNCTION_START.format(name = 'COMMAND EXECUTION'))
     command_str = ' '.join(command)
     LOG.debug(f'{command_str = }')
