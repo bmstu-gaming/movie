@@ -27,9 +27,3 @@ STREAM = r'\[STREAM\](.*?)\[/STREAM\]'
 STREAM_TYPE_VIDEO = 'video'
 STREAM_TYPE_AUDIO = 'audio'
 STREAM_TYPE_SUBTITLE = 'subtitle'
-
-ERROR_MESSAGE_FILE_IN_USE = (
-    'Error accessing file {file_path}: '
-    'the file is using by another process. '
-    'Please close the program that is using the file.'
-)

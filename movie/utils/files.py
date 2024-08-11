@@ -11,16 +11,12 @@ def remove(file_path: str) -> None:
         try:
             os.remove(file_path)
             break
-        except OSError as e:
-            if e.winerror == 32:
-                LOG.error(constants.ERROR_MESSAGE_FILE_IN_USE, file_path=file_path)
-                time.sleep(5)
-            else:
-                err_str = f'Error deleting file {file_path}: {e}'
-                LOG.error(err_str)
-                break
-        except Exception as e:
-            err_str = f'Error while removing: {str(e)}'
+        except OSError as exc:
+            err_str = f'Error deleting file {file_path}: {exc}'
+            LOG.error(err_str)
+            time.sleep(5)
+        except Exception as exc:
+            err_str = f'Error while removing: {str(exc)}'
             LOG.error(err_str)
             break
 
@@ -32,13 +28,9 @@ def rename(old_path, new_path):
             os.rename(old_path, new_path)
             break
         except OSError as exc:
-            if exc.winerror == 32:
-                LOG.error(constants.ERROR_MESSAGE_FILE_IN_USE, file_path=old_path)
-                time.sleep(5)
-            else:
-                err_str = f'Error renaming file {old_path}: {exc}'
-                LOG.error(err_str)
-                break
+            err_str = f'Error renaming file {old_path}: {exc}'
+            LOG.error(err_str)
+            time.sleep(5)
         except Exception as exc:
             err_str = f'Error while renaming file {old_path}: {str(exc)}'
             LOG.error(err_str)
