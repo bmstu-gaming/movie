@@ -5,9 +5,15 @@ from movie.utils import constants
 from movie.utils.logging_config import LOG
 
 
+def _is_file_exists(file_path: str) -> bool:
+    return os.path.isfile(file_path)
+
+
 def remove(file_path: str) -> None:
     while True:
         LOG.debug(f'trying to remove: {file_path}')
+        if not _is_file_exists(file_path):
+            return
         try:
             os.remove(file_path)
             break
@@ -24,6 +30,8 @@ def remove(file_path: str) -> None:
 def rename(old_path, new_path):
     while True:
         LOG.debug(f'trying to rename: {old_path}')
+        if not _is_file_exists(old_path):
+            return
         try:
             os.rename(old_path, new_path)
             break
