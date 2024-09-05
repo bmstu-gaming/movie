@@ -211,42 +211,47 @@ class Movie():
         return video_count
 
 
-    def __rename__(self, file: str, template: str, idx: int, do_rename=True):
+    def __rename__(self, file: str, template: str, idx: int):
         file_name, file_extension = os.path.splitext(file)
         new_file_name = template.format(episode_idx=idx)
         LOG.debug(f'old_file: {file_name}{file_extension}')
         LOG.debug(f'new_file: {new_file_name}{file_extension}')
         old_path = os.path.join(self.movies_folder, file)
         new_path = os.path.join(self.movies_folder, new_file_name + file_extension)
-        if do_rename:
-            files.rename(old_path, new_path)
+
+        files.rename(old_path, new_path)
 
 
-    def rename_files(self, do_rename=True):
+    def rename_files(self):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'RENAMING FILES'))
         if self.__is_series__() == 1:
             template_vid = self.name_template
             template_sub = self.name_template + '.RUS'
             template_img = self.name_template
+            template_aud = self.name_template
         else:
             template_vid = self.name_template + '.E{episode_idx:02d}'
             template_sub = self.name_template + '.E{episode_idx:02d}.RUS'
             template_img = self.name_template + '.E{episode_idx:02d}'
+            template_aud = self.name_template + '.E{episode_idx:02d}.RUS'
 
         base_idx = 1
-        sub_idx, vid_idx, img_idx = base_idx, base_idx, base_idx
+        sub_idx, vid_idx, img_idx, aud_idx = base_idx, base_idx, base_idx, base_idx
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             _, file_extension = os.path.splitext(f)
 
             if file_extension in constants.VIDEO:
-                self.__rename__(f, template_vid, vid_idx, do_rename=do_rename)
+                self.__rename__(f, template_vid, vid_idx)
                 vid_idx += 1
             elif file_extension in constants.SUBTITLE:
-                self.__rename__(f, template_sub, sub_idx, do_rename=do_rename)
+                self.__rename__(f, template_sub, sub_idx)
                 sub_idx += 1
             elif file_extension in constants.IMAGE:
-                self.__rename__(f, template_img, img_idx, do_rename=do_rename)
+                self.__rename__(f, template_img, img_idx)
                 img_idx += 1
+            elif file_extension in constants.AUDIO:
+                self.__rename__(f, template_aud, aud_idx)
+                aud_idx += 1
 
 
     def subs_convert_srt_to_ass(self):
