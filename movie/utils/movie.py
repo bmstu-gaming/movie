@@ -567,9 +567,19 @@ class Movie():
             frequent_style = str(next(iter(self.style_occurrences)))
             LOG.debug(f'{frequent_style = }')
 
+            set_signs_style_next_event = False
             for event in doc.events:
-                clear_text = re.sub(r'{[^}]*}', '', event.text).strip()
-                event.text = clear_text
+                clear_text = re.sub(constants.SUBTITLE_TAGS_REGEX, '', event.text).strip()
+
+                if set_signs_style_next_event:
+                    event.style = 'Signs'
+                    set_signs_style_next_event = False
+
+                if re.search(constants.SUBTITLE_GRAPHIC_REGEX, event.text):
+                    event.text = ''
+                    set_signs_style_next_event = True
+                else:
+                    event.text = clear_text
 
                 if re.match(rf'^{frequent_style}', string=event.style):
                     event.style = 'Main'
