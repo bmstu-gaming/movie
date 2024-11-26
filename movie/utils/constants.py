@@ -28,6 +28,8 @@ AUDIO = [AAC, MKA, FLAC]
 
 NAME_TEMPLATE_VERIFICATION_REGEX = r'^[^\/\\\:\*\?\"\<\>\|]+$'
 STREAM = r'\[STREAM\](.*?)\[/STREAM\]'
+SUBTITLE_GRAPHIC_REGEX = r'\{\\an\d*\}m'
+SUBTITLE_TAGS_REGEX = r'{[^}]*}'
 
 STREAM_TYPE_VIDEO = 'video'
 STREAM_TYPE_AUDIO = 'audio'
