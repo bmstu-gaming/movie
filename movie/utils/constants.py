@@ -10,7 +10,8 @@ LOG_FUNCTION_END =   '╚==================== {name} ====================╝'
 MKV = '.mkv'
 MP4 = '.mp4'
 AVI = '.avi'
-VIDEO = [MKV, MP4, AVI]
+M4V = '.m4v'
+VIDEO = [MKV, MP4, AVI, M4V]
 
 ASS = '.ass'
 SRT = '.srt'
