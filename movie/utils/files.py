@@ -47,8 +47,8 @@ def rename(old_path, new_path):
 
 def restoring_target_filename_to_source(path_target: str, path_source: str):
     LOG.debug(
-        constants.LOG_FUNCTION_START.format(name='restoring target filename to source filename'))
+        constants.LOG_FUNCTION_START.format(name='Restoring TARGET filename to SOURCE filename'))
     remove(path_source)
     rename(path_target, path_source)
     LOG.debug(
-        constants.LOG_FUNCTION_END.format(name='restoring target filename to source filename'))
+        constants.LOG_FUNCTION_END.format(name='restoring TARGET filename to SOURCE filename'))

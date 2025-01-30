@@ -9,20 +9,42 @@ from movie import scenarios
 
 def get_stream_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
     selection_stream_submenu = consolemenu.ConsoleMenu(
-        'Streams selection', prologue_text='select the type of indication for saving streams:')
+        'Streams selection', prologue_text='select the type of indication for saving streams:', exit_menu_char='q')
+
     item_selected_streams = consolemenu.items.FunctionItem(
         'Select Streams (simple)', scenarios.select_and_process_streams, args=[movie_obj])
     item_selected_streams_and_language = consolemenu.items.FunctionItem(
         'Select Streams (with language)', scenarios.select_and_process_streams_with_language, args=[movie_obj])
+
     selection_stream_submenu.append_item(item_selected_streams)
     selection_stream_submenu.append_item(item_selected_streams_and_language)
-    stream_submenu = consolemenu.items.SubmenuItem('Select streams', submenu=selection_stream_submenu)
+
+    stream_submenu = consolemenu.items.SubmenuItem('Select streams', submenu=selection_stream_submenu, menu_char='v')
     return stream_submenu
+
+
+def get_audio_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
+    selection_audio_submenu = consolemenu.ConsoleMenu(
+        'Audio settings', prologue_text='select the type of audio settings:', exit_menu_char='q')
+
+    item_extract_audio = consolemenu.items.FunctionItem(
+        'Extract audio (in work)', scenarios.common_call, args=[movie_obj, Movie.func_in_progress])
+    item_insert_audio = consolemenu.items.FunctionItem(
+        'Insert/combine audio with video (in work)', scenarios.common_call, args=[movie_obj, Movie.func_in_progress])
+    item_non_default_external_audio = consolemenu.items.FunctionItem(
+        'Remove default settings from external audio', scenarios.common_call, args=[movie_obj, Movie.set_external_audio_non_default])
+    
+    selection_audio_submenu.append_item(item_extract_audio)
+    selection_audio_submenu.append_item(item_insert_audio)
+    selection_audio_submenu.append_item(item_non_default_external_audio)
+
+    audio_submenu = consolemenu.items.SubmenuItem('Select audio', submenu=selection_audio_submenu, menu_char='a')
+    return audio_submenu
 
 
 def get_subtitle_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
     subtitle_settings_submenu = consolemenu.ConsoleMenu(
-        'Subtitle settings', prologue_text='select the type of subtitle settings:')
+        'Subtitle settings', prologue_text='select the type of subtitle settings:', exit_menu_char='q')
     item_subtitle_information = consolemenu.items.FunctionItem(
         'Information', scenarios.common_call, args=[movie_obj, Movie.get_sub_info])
     item_subtitle_extract_to_ass = consolemenu.items.FunctionItem(
@@ -35,7 +57,8 @@ def get_subtitle_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
     subtitle_settings_submenu.append_item(item_subtitle_extract_to_ass)
     subtitle_settings_submenu.append_item(item_subtitle_purification)
     subtitle_settings_submenu.append_item(item_subtitle_translation)
-    subtitle_submenu = consolemenu.items.SubmenuItem('Subtitle settings', submenu=subtitle_settings_submenu)
+
+    subtitle_submenu = consolemenu.items.SubmenuItem('Subtitle settings', submenu=subtitle_settings_submenu, menu_char='s')
     return subtitle_submenu
 
 
@@ -46,30 +69,34 @@ def main_menu():
 
     movie_obj = config.apply_config()
 
-    menu = consolemenu.ConsoleMenu('Main menu', prologue_text=f'logs in: {constants.LOG_FILE}')
+    menu = consolemenu.ConsoleMenu('Main menu', prologue_text=f'logs in: {constants.LOG_FILE}', exit_menu_char='q')
 
-    item1 = consolemenu.items.FunctionItem(
+    item_update_config = consolemenu.items.FunctionItem(
         'Update config', scenarios.common_call, args=[movie_obj, config.update_config])
 
-    item2 = consolemenu.items.FunctionItem('Streams info & log', scenarios.streams_info, args=[movie_obj])
+    item_streams_info = consolemenu.items.FunctionItem('Streams info & log', scenarios.streams_info, args=[movie_obj])
 
-    item3 = get_stream_submenu(movie_obj)
-    item3.set_menu(menu)
+    item_streams_processing = get_stream_submenu(movie_obj)
+    item_streams_processing.set_menu(menu)
 
-    item4 = get_subtitle_submenu(movie_obj)
-    item4.set_menu(menu)
+    item_audio_processing = get_audio_submenu(movie_obj)
+    item_audio_processing.set_menu(menu)
 
-    item5 = consolemenu.items.FunctionItem(
-        'Preview generation', scenarios.common_call, args=[movie_obj, Movie.preview_generate])
-    item6 = consolemenu.items.FunctionItem(
-        'Renaming files', scenarios.common_call, args=[movie_obj, Movie.rename_files])
+    item_subtitle = get_subtitle_submenu(movie_obj)
+    item_subtitle.set_menu(menu)
 
-    menu.append_item(item1)
-    menu.append_item(item2)
-    menu.append_item(item3)
-    menu.append_item(item4)
-    menu.append_item(item5)
-    menu.append_item(item6)
+    item_preview = consolemenu.items.FunctionItem(
+        'Preview generation', scenarios.common_call, args=[movie_obj, Movie.preview_generate], menu_char='g')
+    item_renaming = consolemenu.items.FunctionItem(
+        'Renaming files', scenarios.common_call, args=[movie_obj, Movie.rename_files], menu_char='r')
+
+    menu.append_item(item_update_config)
+    menu.append_item(item_streams_info)
+    menu.append_item(item_streams_processing)
+    menu.append_item(item_audio_processing)
+    menu.append_item(item_subtitle)
+    menu.append_item(item_preview)
+    menu.append_item(item_renaming)
 
     menu.start()
     menu.join()
