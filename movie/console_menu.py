@@ -30,10 +30,11 @@ def get_audio_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
     item_extract_audio = consolemenu.items.FunctionItem(
         'Extract audio (in work)', scenarios.common_call, args=[movie_obj, Movie.func_in_progress])
     item_insert_audio = consolemenu.items.FunctionItem(
-        'Insert/combine audio with video (in work)', scenarios.common_call, args=[movie_obj, Movie.func_in_progress])
+        'Insert/combine audio with video (in work)',scenarios.common_call, args=[movie_obj, Movie.func_in_progress])
     item_non_default_external_audio = consolemenu.items.FunctionItem(
-        'Remove default settings from external audio', scenarios.common_call, args=[movie_obj, Movie.set_external_audio_non_default])
-    
+        'Remove default settings from external audio',
+        scenarios.common_call, args=[movie_obj, Movie.set_external_audio_non_default])
+
     selection_audio_submenu.append_item(item_extract_audio)
     selection_audio_submenu.append_item(item_insert_audio)
     selection_audio_submenu.append_item(item_non_default_external_audio)
@@ -58,7 +59,9 @@ def get_subtitle_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
     subtitle_settings_submenu.append_item(item_subtitle_purification)
     subtitle_settings_submenu.append_item(item_subtitle_translation)
 
-    subtitle_submenu = consolemenu.items.SubmenuItem('Subtitle settings', submenu=subtitle_settings_submenu, menu_char='s')
+    subtitle_submenu = consolemenu.items.SubmenuItem(
+        'Subtitle settings', submenu=subtitle_settings_submenu, menu_char='s')
+
     return subtitle_submenu
 
 

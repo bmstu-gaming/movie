@@ -54,11 +54,12 @@ class Movie():
 
         cmd_exec = [self.ffprobe_path, '-show_streams', vid_path_source]
         stdout = command.execute(cmd_exec)
+        log_data = str("")
         if stdout.stderr is not None:
-            LOG.debug(f'stdout.stderr is not None')
+            LOG.debug('stdout.stderr is not None')
             log_data = stdout.stderr
         elif stdout.stdout is not None:
-            LOG.debug(f'stdout.stdout is not None')
+            LOG.debug('stdout.stdout is not None')
             log_data = stdout.stdout
 
         logs_folder = 'logs'
@@ -184,23 +185,23 @@ class Movie():
         self.exec_command_for_files(video_files, streams_metadata)
 
 
-    def __get_files_by_type__(self, type) -> List[str]:
-        files = []
+    def __get_files_by_type__(self, files_type) -> List[str]:
+        multimedia_files = []
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
             _, file_extension = os.path.splitext(f)
-            if file_extension in type:
-                files.append(f)
-        return files
+            if file_extension in files_type:
+                multimedia_files.append(f)
+        return multimedia_files
 
 
     def __get_audio_files__(self) -> List[str]:
-        files = self.__get_files_by_type__(constants.AUDIO)
-        return files
+        audio_files = self.__get_files_by_type__(constants.AUDIO)
+        return audio_files
 
 
     def __get_video_files__(self) -> List[str]:
-        files = self.__get_files_by_type__(constants.VIDEO)
-        return files
+        video_files = self.__get_files_by_type__(constants.VIDEO)
+        return video_files
 
 
     def set_external_audio_non_default(self):
