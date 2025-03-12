@@ -52,11 +52,14 @@ def get_subtitle_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
         'Extraction', scenarios.subtitle_extract_to_ass, args=[movie_obj])
     item_subtitle_purification = consolemenu.items.FunctionItem(
         'Purification', scenarios.subtitle_ass_purification, args=[movie_obj])
+    item_subtitle_convert_srt_to_ass = consolemenu.items.FunctionItem(
+        'Convert SRT to ASS', scenarios.common_call, args=[movie_obj, Movie.subs_convert_srt_to_ass])
     item_subtitle_translation = consolemenu.items.FunctionItem(
         'Translation', scenarios.subtitle_ass_translation, args=[movie_obj])
     subtitle_settings_submenu.append_item(item_subtitle_information)
     subtitle_settings_submenu.append_item(item_subtitle_extract_to_ass)
     subtitle_settings_submenu.append_item(item_subtitle_purification)
+    subtitle_settings_submenu.append_item(item_subtitle_convert_srt_to_ass)
     subtitle_settings_submenu.append_item(item_subtitle_translation)
 
     subtitle_submenu = consolemenu.items.SubmenuItem(

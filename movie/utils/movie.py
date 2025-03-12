@@ -315,6 +315,10 @@ class Movie():
                 sub_srt_path = os.path.join(self.movies_folder, filename + file_extension)
 
                 files.remove(sub_srt_path)
+        LOG.debug(
+            constants.LOG_FUNCTION_END.format(
+                name = f'convert {constants.STREAM_TYPE_SUBTITLE} {constants.SRT} -> {constants.ASS}')
+        )
 
 
     def __get_styles__(self, file: str) -> dict:
