@@ -161,9 +161,6 @@ def subtitle_ass_purification(movie_obj: movie.Movie):
 Making subtitle clear
         '''
     )
-    movie_obj.get_sub_info()
     movie_obj.ass_subtitle_purification()
-    pu.println('\nSubtitle styles after processing:\n')
-    movie_obj.get_sub_info()
 
     _function_end(pu)
