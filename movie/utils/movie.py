@@ -27,7 +27,6 @@ class Movie():
     movies_folder: str
     name_template: str
     streams: List[stream.Stream]
-    style_occurrences: dict
 
     def __init__(self, ffmpeg_path: str, ffprobe_path: str, movies_folder: str, name_template: str) -> None:
         self._filename_prefix = generator.get_filename_prefix()
@@ -36,7 +35,6 @@ class Movie():
         self.movies_folder = movies_folder
         self.name_template = name_template
         self.streams = None
-        self.style_occurrences = None
 
 
     def __set_streams__(self, stdout: str) -> None:
@@ -336,8 +334,7 @@ class Movie():
         sorted_style_occurrences = dict(sorted(style_occurrences.items(), key=lambda x: x[1], reverse=True))
         LOG.debug(f'{sorted_style_occurrences = }')
 
-        for key in sorted_style_occurrences:
-            LOG.info(f'{key}: {sorted_style_occurrences[key]}')
+        LOG.info(f"{file}: {', '.join(f'{k}: {v}' for k, v in sorted_style_occurrences.items())}")
 
         return sorted_style_occurrences
 
@@ -349,7 +346,7 @@ class Movie():
             if file_extension == constants.ASS:
                 first_subtitle = f
                 LOG.debug(f'{first_subtitle = }')
-                self.style_occurrences = self.__get_styles__(f)
+                self.__get_styles__(f)
                 return
         LOG.warning('There is no .ass subtitles in folder')
 
@@ -540,7 +537,7 @@ class Movie():
                 preview_idx += 1
 
 
-    def __subtitle_purification__(self, sub_path_source, sub_path_target):
+    def __subtitle_purification__(self, sub_path_source: str, sub_path_target: str, style_occurrences: dict):
         with codecs.open(
             sub_path_source, mode='r', encoding=self.__get_file_encoding__(sub_path_source)
         ) as sub_file_source:
@@ -609,7 +606,7 @@ class Movie():
             doc.styles = ass.section.StylesSection('V4+ Styles', subs)
             LOG.debug(f'{doc.styles = }')
 
-            frequent_style = str(next(iter(self.style_occurrences)))
+            frequent_style = str(next(iter(style_occurrences)))
             LOG.debug(f'{frequent_style = }')
 
             set_signs_style_next_event = False
@@ -648,7 +645,8 @@ class Movie():
                 sub_path_target = os.path.join(self.movies_folder, f'{f_name}.PURE{f_ext}')
                 LOG.debug(f'{sub_path_source = }')
                 LOG.debug(f'{sub_path_target = }')
-                self.__subtitle_purification__(sub_path_source, sub_path_target)
+                styles_occurrences = self.__get_styles__(f)
+                self.__subtitle_purification__(sub_path_source, sub_path_target, styles_occurrences)
         LOG.debug(constants.LOG_FUNCTION_END.format(name = f'{constants.STREAM_TYPE_SUBTITLE} PURIFACATION'))
 
 
