@@ -202,6 +202,26 @@ class Movie():
         return video_files
 
 
+    def extract_audio_from_video_files(self) -> None:
+        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Remove default settings in external audio'))
+
+        video_files = self.__get_video_files__()
+        for f in video_files:
+            LOG.info(f'{f}')
+            file_name, _ = os.path.splitext(f)
+            path_source = os.path.join(self.movies_folder, f)
+            path_target = os.path.join(self.movies_folder, f'{file_name}{constants.AAC}')
+            cmd_exec = [
+                self.ffmpeg_path,
+                '-i', path_source,
+                '-vn',  '-acodec', 'copy',
+                path_target
+            ]
+            LOG.debug(f'{cmd_exec = }')
+            command.execute(cmd_exec)
+
+        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Remove default settings in external audio'))
+
     def set_external_audio_non_default(self):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Remove default settings in external audio'))
 
