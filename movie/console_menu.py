@@ -28,7 +28,7 @@ def get_audio_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
         'Audio settings', prologue_text='select the type of audio settings:', exit_menu_char='q')
 
     item_extract_audio = consolemenu.items.FunctionItem(
-        'Extract audio (in work)', scenarios.common_call, args=[movie_obj, Movie.func_in_progress])
+        'Extract audio from video', scenarios.common_call, args=[movie_obj, Movie.extract_audio_from_video_files])
     item_insert_audio = consolemenu.items.FunctionItem(
         'Insert/combine audio with video (in work)',scenarios.common_call, args=[movie_obj, Movie.func_in_progress])
     item_non_default_external_audio = consolemenu.items.FunctionItem(
