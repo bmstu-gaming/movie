@@ -36,13 +36,11 @@ class Movie():
         self.name_template = name_template
         self.streams = None
 
-
     def __set_streams__(self, stdout: str) -> None:
         streams = stream.parse_ffprobe_output(stdout)
         media_streams = stream.filter_media_streams(streams)
         LOG.debug(f'{media_streams = }')
         self.streams = media_streams
-
 
     def __get_video_streams_and_log_file__(self, video: str):
         vid_path_source = os.path.join(self.movies_folder, video)
@@ -78,15 +76,9 @@ class Movie():
 
         return log_path_target
 
-
     def __get_first_video_in_directory__(self) -> Union[str, None]:
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
-            _, file_extension = os.path.splitext(f)
-            if file_extension in constants.VIDEO:
-                return f
-
-        return None
-
+        video_files = self.__get_video_files__()
+        return video_files[0] if video_files else None
 
     def get_streams_and_log_file(self) -> str:
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'STREAMS AND LOG FILE'))
@@ -95,7 +87,6 @@ class Movie():
         if first_video is None:
             return None
         return self.__get_video_streams_and_log_file__(first_video)
-
 
     def __get_first_stream_of_type__(self,  selected_streams: List[int], stream_type: str) -> int:
         stream_indices = {stream.index for stream in self.streams}
@@ -107,7 +98,6 @@ class Movie():
                 if corresponding_stream.stream_type == stream_type:
                     return selected_stream
         return None
-
 
     def __get_default_streams__(self, selected_streams: List[int]) -> List[int]:
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'GET DEFAULT SELECTED STREAMS'))
@@ -123,7 +113,6 @@ class Movie():
 
         LOG.debug(constants.LOG_FUNCTION_END.format(name = 'GET DEFAULT SELECTED STREAMS'))
         return default_streams
-
 
     def process_streams(self, selected_streams: List[int]):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS'))
@@ -151,7 +140,6 @@ class Movie():
         LOG.debug(f'{video_files = }')
 
         self.exec_command_for_files(video_files, streams_metadata)
-
 
     def process_streams_with_language(self, streams_languages: dict):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS WITH LANGUAGE'))
@@ -182,6 +170,10 @@ class Movie():
 
         self.exec_command_for_files(video_files, streams_metadata)
 
+    def _natural_sort_key(self, s: str) -> list:
+        def convert(text):
+            return int(text) if text.isdigit() else text.lower()
+        return [convert(c) for c in re.split('([0-9]+)', s)]
 
     def __get_files_by_type__(self, files_type) -> List[str]:
         multimedia_files = []
@@ -189,18 +181,26 @@ class Movie():
             _, file_extension = os.path.splitext(f)
             if file_extension in files_type:
                 multimedia_files.append(f)
+        multimedia_files.sort(key=self._natural_sort_key)
         return multimedia_files
 
-
     def __get_audio_files__(self) -> List[str]:
-        audio_files = self.__get_files_by_type__(constants.AUDIO)
-        return audio_files
-
+        return self.__get_files_by_type__(constants.AUDIO)
 
     def __get_video_files__(self) -> List[str]:
-        video_files = self.__get_files_by_type__(constants.VIDEO)
-        return video_files
+        return self.__get_files_by_type__(constants.VIDEO)
 
+    def __get_subtitle_files__(self) -> List[str]:
+        return self.__get_files_by_type__(constants.SUBTITLE)
+
+    def __get_srt_subtitle_files__(self) -> List[str]:
+        return self.__get_files_by_type__(constants.SUBTITLE)
+
+    def __get_ass_subtitle_files__(self) -> List[str]:
+        return self.__get_files_by_type__(constants.SUBTITLE)
+
+    def __get_image_files__(self) -> List[str]:
+        return self.__get_files_by_type__(constants.IMAGE)
 
     def extract_audio_from_video_files(self) -> None:
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Remove default settings in external audio'))
@@ -233,13 +233,11 @@ class Movie():
 
         LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Remove default settings in external audio'))
 
-
     def __separate_media_streams__(self) -> Tuple[List[stream.Stream], List[stream.Stream], List[stream.Stream]]:
         vid_list = [d for d in self.streams if d.stream_type == constants.STREAM_TYPE_VIDEO]
         aud_list = [d for d in self.streams if d.stream_type == constants.STREAM_TYPE_AUDIO]
         sub_list = [d for d in self.streams if d.stream_type == constants.STREAM_TYPE_SUBTITLE]
         return vid_list, aud_list, sub_list
-
 
     def exec_command_for_files(self, multimedia_files: List[str], command_exec: List[str]):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Execution command for files'))
@@ -263,16 +261,11 @@ class Movie():
 
         LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Execution command for files'))
 
-
     def __is_series__(self) -> int:
-        video_count = 0
-        for _, f in enumerate(os.listdir(self.movies_folder)):
-            _, file_extension = os.path.splitext(f)
-            if file_extension in constants.VIDEO:
-                video_count += 1
+        video_files = self.__get_video_files__()
+        video_count = len(video_files)
         LOG.debug(f'{video_count = }')
         return video_count
-
 
     def __rename__(self, file: str, template: str, idx: int):
         file_name, file_extension = os.path.splitext(file)
@@ -283,7 +276,6 @@ class Movie():
         new_path = os.path.join(self.movies_folder, new_file_name + file_extension)
 
         files.rename(old_path, new_path)
-
 
     def rename_files(self):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'RENAMING FILES'))
@@ -298,48 +290,37 @@ class Movie():
             template_img = self.name_template + '.E{episode_idx:02d}'
             template_aud = self.name_template + '.E{episode_idx:02d}.RUS'
 
-        base_idx = 1
-        sub_idx, vid_idx, img_idx, aud_idx = base_idx, base_idx, base_idx, base_idx
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
-            _, file_extension = os.path.splitext(f)
-
-            if file_extension in constants.VIDEO:
-                self.__rename__(f, template_vid, vid_idx)
-                vid_idx += 1
-            elif file_extension in constants.SUBTITLE:
-                self.__rename__(f, template_sub, sub_idx)
-                sub_idx += 1
-            elif file_extension in constants.IMAGE:
-                self.__rename__(f, template_img, img_idx)
-                img_idx += 1
-            elif file_extension in constants.AUDIO:
-                self.__rename__(f, template_aud, aud_idx)
-                aud_idx += 1
-
+        for idx, f in enumerate(self.__get_video_files__(), start=1):
+            self.__rename__(f, template_vid, idx)
+        for idx, f in enumerate(self.__get_audio_files__(), start=1):
+            self.__rename__(f, template_aud, idx)
+        for idx, f in enumerate(self.__get_subtitle_files__(), start=1):
+            self.__rename__(f, template_sub, idx)
+        for idx, f in enumerate(self.__get_image_files__(), start=1):
+            self.__rename__(f, template_img, idx)
 
     def subs_convert_srt_to_ass(self):
         LOG.debug(
             constants.LOG_FUNCTION_START.format(
                 name = f'convert {constants.STREAM_TYPE_SUBTITLE} {constants.SRT} -> {constants.ASS}')
         )
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
+        for f in self.__get_srt_subtitle_files__():
             filename, file_extension = os.path.splitext(f)
-            if file_extension == constants.SRT:
-                LOG.debug(f'{filename} -> .ass ')
 
-                sub_path_source = os.path.join(self.movies_folder, f)
-                sub_path_target = os.path.join(self.movies_folder, f'{filename}.ass')
+            LOG.debug(f'{filename} -> .ass ')
 
-                subs = pysubs2.load(sub_path_source, encoding=self.__get_file_encoding__(sub_path_source))
-                subs.save(sub_path_target, encoding='utf-8')
-                sub_srt_path = os.path.join(self.movies_folder, filename + file_extension)
+            sub_path_source = os.path.join(self.movies_folder, f)
+            sub_path_target = os.path.join(self.movies_folder, f'{filename}.ass')
 
-                files.remove(sub_srt_path)
+            subs = pysubs2.load(sub_path_source, encoding=self.__get_file_encoding__(sub_path_source))
+            subs.save(sub_path_target, encoding='utf-8')
+            sub_srt_path = os.path.join(self.movies_folder, filename + file_extension)
+
+            files.remove(sub_srt_path)
         LOG.debug(
             constants.LOG_FUNCTION_END.format(
                 name = f'convert {constants.STREAM_TYPE_SUBTITLE} {constants.SRT} -> {constants.ASS}')
         )
-
 
     def __get_styles__(self, file: str) -> dict:
         sub_path_source = os.path.join(self.movies_folder, file)
@@ -362,18 +343,17 @@ class Movie():
 
         return sorted_style_occurrences
 
-
     def get_sub_info(self):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = f'{constants.ASS}-SUBTITLE INFO'))
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
-            _, file_extension = os.path.splitext(f)
-            if file_extension == constants.ASS:
-                first_subtitle = f
-                LOG.debug(f'{first_subtitle = }')
-                self.__get_styles__(f)
-                return
-        LOG.warning('There is no .ass subtitles in folder')
+        ass_sub_files = self.__get_ass_subtitle_files__()
 
+        if not ass_sub_files:
+            LOG.warning('There is no .ass subtitles in folder')
+            return
+
+        first_subtitle = ass_sub_files[0]
+        LOG.debug(f'{first_subtitle = }')
+        self.__get_styles__(first_subtitle)
 
     def __extract_subtitle__(self, vid_path_source: str, sub_path_target: str):
         cmd_exec = [
@@ -384,43 +364,40 @@ class Movie():
         ]
         command.execute(cmd_exec)
 
-
     def extract_subtitle(self, keep_subtitles=False):
         LOG.debug(
             constants.LOG_FUNCTION_START.format(
                 name = (f'EXTRACT {constants.STREAM_TYPE_SUBTITLE} FROM {constants.STREAM_TYPE_VIDEO}')
             )
         )
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
+        for f in self.__get_video_files__():
             filename, file_extension = os.path.splitext(f)
-            if file_extension in constants.VIDEO:
-                vid_path_source = os.path.join(self.movies_folder, f)
-                sub_path_target = os.path.join(self.movies_folder, filename + constants.SRT)
-                LOG.info(f'{f}')
-                LOG.debug(f'{sub_path_target = }')
 
-                self.__extract_subtitle__(vid_path_source, sub_path_target)
+            vid_path_source = os.path.join(self.movies_folder, f)
+            sub_path_target = os.path.join(self.movies_folder, filename + constants.SRT)
+            LOG.info(f'{f}')
+            LOG.debug(f'{sub_path_target = }')
 
-                if not keep_subtitles:
-                    vid_path_target = os.path.join(
-                        self.movies_folder, f'{self._filename_prefix}.no_subs{file_extension}')
-                    LOG.debug(f'{vid_path_target = }')
-                    cmd_exec = [
-                        self.ffmpeg_path,
-                        '-i', vid_path_source,
-                        '-map', '0', '-c', 'copy', '-sn',
-                        vid_path_target
-                    ]
-                    command.execute(cmd_exec)
-                    files.restoring_target_filename_to_source(vid_path_target, vid_path_source)
+            self.__extract_subtitle__(vid_path_source, sub_path_target)
 
+            if not keep_subtitles:
+                vid_path_target = os.path.join(
+                    self.movies_folder, f'{self._filename_prefix}.no_subs{file_extension}')
+                LOG.debug(f'{vid_path_target = }')
+                cmd_exec = [
+                    self.ffmpeg_path,
+                    '-i', vid_path_source,
+                    '-map', '0', '-c', 'copy', '-sn',
+                    vid_path_target
+                ]
+                command.execute(cmd_exec)
+                files.restoring_target_filename_to_source(vid_path_target, vid_path_source)
 
     def __get_file_encoding__(self, file: str) -> str:
         with open(file, 'rb') as f:
             result = chardet.detect(f.read())
         f.close()
         return result['encoding']
-
 
     def __get_resized_preview_image__(self, image: str):
         f_name, f_ext = os.path.splitext(image)
@@ -447,14 +424,12 @@ class Movie():
 
         return img_resized_filename
 
-
     def __get_background_image__(self):
         img_bg = Image.new('RGB', (400, 600), color=(16, 16, 16))
         img_bg_filename = 'bg.jpg'
         img_bg_file_source = os.path.join(self.movies_folder, img_bg_filename)
         img_bg.save(img_bg_file_source)
         return img_bg_filename
-
 
     def __get_preview_with_background__(self, preview_image, background_image):
         preview_image_path = os.path.join(self.movies_folder, preview_image)
@@ -474,7 +449,6 @@ class Movie():
 
         return img_preview_filename
 
-
     def __create_combined_image__(self, img_preview, img_bg):
         preview_width, preview_height = img_preview.size
         bg_width, bg_height = img_bg.size
@@ -488,7 +462,6 @@ class Movie():
 
         return result
 
-
     def __save_combined_image__(self, preview_image, result):
         f_name, f_ext = os.path.splitext(preview_image)
         img_preview_filename = f'{f_name}.preview{f_ext}'
@@ -496,7 +469,6 @@ class Movie():
         result.save(img_preview_path)
 
         return img_preview_filename
-
 
     def __copy_preview_image__(self, image):
         f_name, f_ext = os.path.splitext(image)
@@ -513,7 +485,6 @@ class Movie():
         image.close()
 
         files.remove(img_path)
-
 
     def __write_number__(self, image, number):
         f_name, f_ext = os.path.splitext(image)
@@ -532,34 +503,28 @@ class Movie():
 
         files.remove(img_path)
 
-
     def preview_generate(self):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'PREVIEW GENERATE'))
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
-            _, f_ext = os.path.splitext(f)
-            if f_ext in constants.IMAGE:
-                LOG.debug(f'{f = }')
-                img_file_resized = self.__get_resized_preview_image__(f)
-                LOG.debug(f'{img_file_resized = }')
-                img_bg_file = self.__get_background_image__()
-                LOG.debug(f'{img_bg_file = }')
-                img_preview = self.__get_preview_with_background__(img_file_resized, img_bg_file)
-                LOG.debug(f'{img_preview = }')
-                self.__copy_preview_image__(img_preview)
+        for f in self.__get_image_files__():
+            LOG.debug(f'{f = }')
+            img_file_resized = self.__get_resized_preview_image__(f)
+            LOG.debug(f'{img_file_resized = }')
+            img_bg_file = self.__get_background_image__()
+            LOG.debug(f'{img_bg_file = }')
+            img_preview = self.__get_preview_with_background__(img_file_resized, img_bg_file)
+            LOG.debug(f'{img_preview = }')
+            self.__copy_preview_image__(img_preview)
 
         if self.__is_series__() == 1:
             # for one video (film) there is no need to indicate the number
             return
 
         preview_idx = 1
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
-            _, f_ext = os.path.splitext(f)
-            if f_ext in constants.IMAGE:
-                LOG.debug(f'{f = }')
-                LOG.debug(f'{preview_idx = }')
-                self.__write_number__(f, preview_idx)
-                preview_idx += 1
-
+        for f in self.__get_image_files__():
+            LOG.debug(f'{f = }')
+            LOG.debug(f'{preview_idx = }')
+            self.__write_number__(f, preview_idx)
+            preview_idx += 1
 
     def __subtitle_purification__(self, sub_path_source: str, sub_path_target: str, style_occurrences: dict):
         with codecs.open(
@@ -659,20 +624,17 @@ class Movie():
 
         files.remove(sub_path_source)
 
-
     def ass_subtitle_purification(self):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = f'{constants.STREAM_TYPE_SUBTITLE} PURIFACATION'))
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
+        for f in self.__get_ass_subtitle_files__():
             f_name, f_ext = os.path.splitext(f)
-            if f_ext == constants.ASS:
-                sub_path_source = os.path.join(self.movies_folder, f)
-                sub_path_target = os.path.join(self.movies_folder, f'{f_name}.PURE{f_ext}')
-                LOG.debug(f'{sub_path_source = }')
-                LOG.debug(f'{sub_path_target = }')
-                styles_occurrences = self.__get_styles__(f)
-                self.__subtitle_purification__(sub_path_source, sub_path_target, styles_occurrences)
+            sub_path_source = os.path.join(self.movies_folder, f)
+            sub_path_target = os.path.join(self.movies_folder, f'{f_name}.PURE{f_ext}')
+            LOG.debug(f'{sub_path_source = }')
+            LOG.debug(f'{sub_path_target = }')
+            styles_occurrences = self.__get_styles__(f)
+            self.__subtitle_purification__(sub_path_source, sub_path_target, styles_occurrences)
         LOG.debug(constants.LOG_FUNCTION_END.format(name = f'{constants.STREAM_TYPE_SUBTITLE} PURIFACATION'))
-
 
     def __subtitle_translation__(self, sub_path_source, sub_path_target):
         with codecs.open(
@@ -691,10 +653,9 @@ class Movie():
 
         files.remove(sub_path_source)
 
-
     def ass_subtitle_translation(self):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = f'{constants.STREAM_TYPE_SUBTITLE} TRANSLATION'))
-        for _, f in enumerate(os.listdir(self.movies_folder), start=1):
+        for f in self.__get_ass_subtitle_files__():
             f_name, f_ext = os.path.splitext(f)
             if f_ext == constants.ASS:
                 sub_path_source = os.path.join(self.movies_folder, f)
@@ -703,7 +664,6 @@ class Movie():
                 LOG.debug(f'{sub_path_target = }')
                 self.__subtitle_translation__(sub_path_source, sub_path_target)
         LOG.debug(constants.LOG_FUNCTION_END.format(name = f'{constants.STREAM_TYPE_SUBTITLE} TRANSLATION'))
-
 
     def func_in_progress(self) -> None:
         LOG.info('in progress')
