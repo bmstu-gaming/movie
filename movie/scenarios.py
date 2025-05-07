@@ -5,10 +5,10 @@ from typing import Union
 import colors
 import consolemenu
 
+from movie.utils.logging_config import LOG
 from movie.utils import movie
 from movie.utils import notation
 from movie.utils import stream
-
 
 def _function_end(pu: consolemenu.PromptUtils) -> None:
     pu.println('\nProcess completed successfully!')
@@ -17,7 +17,10 @@ def _function_end(pu: consolemenu.PromptUtils) -> None:
 
 def common_call(movie_obj: movie.Movie, function):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
-    function(movie_obj)
+    try:
+        function(movie_obj)
+    except Exception as e:
+        LOG.error(f'Error while running function [{function.__name__}]: {str(e)}')
     _function_end(pu)
 
 
