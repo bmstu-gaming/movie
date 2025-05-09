@@ -104,11 +104,14 @@ class Movie():
 
         LOG.debug(f'{selected_streams = }')
         default_streams = []
-        default_stream_subtitle = self.__get_first_stream_of_type__(selected_streams, constants.STREAM_TYPE_SUBTITLE)
+        default_stream_video = self.__get_first_stream_of_type__(selected_streams, constants.STREAM_TYPE_VIDEO)
         default_stream_audio = self.__get_first_stream_of_type__(selected_streams, constants.STREAM_TYPE_AUDIO)
-        default_streams = [default_stream_subtitle, default_stream_audio]
-        LOG.debug(f'default stream {constants.STREAM_TYPE_SUBTITLE}: {default_stream_subtitle}')
+        default_stream_subtitle = self.__get_first_stream_of_type__(selected_streams, constants.STREAM_TYPE_SUBTITLE)
+        default_streams = [default_stream_video, default_stream_audio, default_stream_subtitle]
+
+        LOG.debug(f'default stream {constants.STREAM_TYPE_VIDEO}: {default_stream_video}')
         LOG.debug(f'default stream {constants.STREAM_TYPE_AUDIO}: {default_stream_audio}')
+        LOG.debug(f'default stream {constants.STREAM_TYPE_SUBTITLE}: {default_stream_subtitle}')
         LOG.debug(f'{default_streams = }')
 
         LOG.debug(constants.LOG_FUNCTION_END.format(name = 'GET DEFAULT SELECTED STREAMS'))
@@ -125,11 +128,15 @@ class Movie():
             LOG.debug(f'{selected_stream = }')
             if selected_stream in stream_indices:
                 stream_metadata = [
-                    '-map', f'0:{selected_stream}',
+                    '-map', f'0:{selected_stream}', f'-disposition:{i}'
                 ]
                 if selected_stream in default_streams:
                     stream_metadata.extend(
-                        [f'-disposition:{i}', 'default']
+                        ['default']
+                    )
+                else:
+                    stream_metadata.extend(
+                        ['0']
                     )
 
                 LOG.debug(f'{stream_metadata = }')
