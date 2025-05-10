@@ -1,5 +1,5 @@
 #!/bin/bash
-
+export LANG=en_US.UTF-8
 
 
 if [ ! -d ".venv" ]; then
@@ -7,18 +7,26 @@ if [ ! -d ".venv" ]; then
     python3 -m venv .venv
 fi
 
-source .venv/bin/activate
+VENV_PYTHON="$(pwd)/.venv/bin/python"
 
-echo "venv activate check..."
-if [ $? -ne 0 ]; then
-    echo "failed to activate virtual environment. Exit."
+echo
+echo "Checking virtual environment Python..."
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo
+    echo "Virtual environment Python not found at: $VENV_PYTHON"
     exit 1
 fi
-which python
-pip --version
 
-echo "install dependencies from file requirements.txt..."
-pip install -r requirements.txt
+echo
+echo "Python from environment:"
+"$VENV_PYTHON" --version
 
-echo "launch..."
-python main.py
+echo
+echo "Install dependencies from file requirements.txt..."
+"$VENV_PYTHON" -m pip install -r requirements.txt > /dev/null 2>&1
+
+echo
+echo "Launching..."
+"$VENV_PYTHON" main.py
+
+read -p "Press Enter to continue..."

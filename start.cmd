@@ -1,5 +1,5 @@
 @echo off
-chcp 65001
+chcp 65001 > NUL
 setlocal
 
 if not exist .venv (
@@ -7,22 +7,28 @@ if not exist .venv (
     python -m venv .venv
 )
 
-call .venv\Scripts\activate
+set VENV_PYTHON=%~dp0.venv\Scripts\python.exe
 
-echo .venv activate check...
-if %errorlevel% neq 0 (
-    echo failed to activate virtual environment. Exit.
+echo.
+echo Checking virtual environment Python...
+if not exist "%VENV_PYTHON%" (
+    echo.
+    echo Virtual environment Python not found at: %VENV_PYTHON%
     exit /b 1
 )
-where python
-pip --version
 
-echo install dependencies from file requirements.txt...
-pip install -r requirements.txt
+echo.
+echo Python from environment:
+"%VENV_PYTHON%" --version
 
-echo launch...
-python main.py
+echo.
+echo Install dependencies from file requirements.txt...
+"%VENV_PYTHON%" -m pip install -r requirements.txt > NUL 2>&1
+
+echo.
+echo Launching...
+cls
+"%VENV_PYTHON%" main.py
 
 pause
-
 endlocal
