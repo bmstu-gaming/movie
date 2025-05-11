@@ -209,25 +209,37 @@ class Movie():
     def __get_image_files__(self) -> List[str]:
         return self.__get_files_by_type__(constants.IMAGE)
 
-    def extract_audio_from_video_files(self) -> None:
-        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Remove default settings in external audio'))
+    def __get_codec_by_audio_type__(self, audio_type: str = constants.MKA):
+        codec_settings = {
+            constants.AAC:  ['aac', '-bsf:a', 'aac_adtstoasc'],
+            constants.FLAC: ['flac'],
+            constants.M4A:  ['aac', '-b:a', '192k'],
+            constants.MKA:  ['copy'],
+            constants.MP3:  ['libmp3lame', '-q:a', '2'],
+            constants.OPUS: ['libopus', '-b:a', '128k'],
+        }
+        return codec_settings[audio_type]
+
+    def extract_audio_from_video_files(self, audio_type: str) -> None:
+        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Extract audio from video files'))
 
         video_files = self.__get_video_files__()
         for f in video_files:
             LOG.info(f'{f}')
             file_name, _ = os.path.splitext(f)
             path_source = os.path.join(self.movies_folder, f)
-            path_target = os.path.join(self.movies_folder, f'{file_name}{constants.AAC}')
+            path_target = os.path.join(self.movies_folder, f'{file_name}{audio_type}')
+            audio_codec = self.__get_codec_by_audio_type__(audio_type)
             cmd_exec = [
                 self.ffmpeg_path,
                 '-i', path_source,
-                '-vn',  '-acodec', 'copy',
+                '-vn',  '-acodec', *audio_codec,
                 path_target
             ]
             LOG.debug(f'{cmd_exec = }')
             command.execute(cmd_exec)
 
-        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Remove default settings in external audio'))
+        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Extract audio from video files'))
 
     def set_external_audio_non_default(self):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Remove default settings in external audio'))
