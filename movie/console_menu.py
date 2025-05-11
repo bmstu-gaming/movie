@@ -23,12 +23,25 @@ def get_stream_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
     return stream_submenu
 
 
+def get_extract_audio_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
+    extract_audio_submenu = consolemenu.ConsoleMenu(
+        'Extract audio from video', prologue_text='select the type of audio output:', exit_menu_char='q')
+
+    for audio_type in constants.AUDIO:
+        item_extract_audio = consolemenu.items.FunctionItem(
+            f'{audio_type}', scenarios.common_call, args=[movie_obj, Movie.extract_audio_from_video_files, audio_type])
+        extract_audio_submenu.append_item(item_extract_audio)
+
+    extract_audio_menu = consolemenu.items.SubmenuItem('Extract audio from video', submenu=extract_audio_submenu)
+    return extract_audio_menu
+
+
 def get_audio_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
     selection_audio_submenu = consolemenu.ConsoleMenu(
         'Audio settings', prologue_text='select the type of audio settings:', exit_menu_char='q')
 
-    item_extract_audio = consolemenu.items.FunctionItem(
-        'Extract audio from video', scenarios.common_call, args=[movie_obj, Movie.extract_audio_from_video_files])
+    item_extract_audio = get_extract_audio_submenu(movie_obj)
+    item_extract_audio.set_menu(selection_audio_submenu)
     item_insert_audio = consolemenu.items.FunctionItem(
         'Insert/combine audio with video (in work)',scenarios.common_call, args=[movie_obj, Movie.func_in_progress])
     item_non_default_external_audio = consolemenu.items.FunctionItem(

@@ -23,9 +23,12 @@ JPEG = '.jpeg'
 IMAGE = [PNG, JPG, JPEG]
 
 AAC = '.aac'
-MKA = '.mka'
 FLAC = '.flac'
-AUDIO = [AAC, MKA, FLAC]
+M4A = '.m4a'
+MKA = '.mka'
+MP3 = '.mp3'
+OPUS = '.opus'
+AUDIO = [AAC, FLAC, M4A, MKA, MP3, OPUS]
 
 NAME_TEMPLATE_VERIFICATION_REGEX = r'^[^\/\\\:\*\?\"\<\>\|]+$'
 STREAM = r'\[STREAM\](.*?)\[/STREAM\]'

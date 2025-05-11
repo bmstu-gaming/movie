@@ -15,10 +15,10 @@ def _function_end(pu: consolemenu.PromptUtils) -> None:
     pu.enter_to_continue('Press [Enter] to go back')
 
 
-def common_call(movie_obj: movie.Movie, function):
+def common_call(movie_obj: movie.Movie, function, *args, **kwargs):
     pu = consolemenu.PromptUtils(consolemenu.Screen())
     try:
-        function(movie_obj)
+        function(movie_obj, *args, **kwargs)
     except Exception as e:
         LOG.error(f'Error while running function [{function.__name__}]: {str(e)}')
     _function_end(pu)
