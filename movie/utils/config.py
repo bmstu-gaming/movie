@@ -60,6 +60,7 @@ def _verification_tool(ffmpeg: str) -> Tuple[bool, str]:
     try:
         command.execute(run_cmd)
     except Exception as exc:
+        LOG.exception('Error while running program')
         return False, str(exc)
 
     return True, ''

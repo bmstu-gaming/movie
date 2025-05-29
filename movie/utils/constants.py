@@ -28,7 +28,8 @@ M4A = '.m4a'
 MKA = '.mka'
 MP3 = '.mp3'
 OPUS = '.opus'
-AUDIO = [AAC, FLAC, M4A, MKA, MP3, OPUS]
+WAV = '.wav'
+AUDIO = [AAC, FLAC, M4A, MKA, MP3, OPUS, WAV]
 
 NAME_TEMPLATE_VERIFICATION_REGEX = r'^[^\/\\\:\*\?\"\<\>\|]+$'
 STREAM = r'\[STREAM\](.*?)\[/STREAM\]'

@@ -22,6 +22,7 @@ def remove(file_path: str) -> None:
             LOG.error(err_str)
             time.sleep(5)
         except Exception as exc:
+            LOG.exception('Error while running program')
             err_str = f'Error while removing: {str(exc)}'
             LOG.error(err_str)
             break
@@ -40,6 +41,7 @@ def rename(old_path, new_path):
             LOG.error(err_str)
             time.sleep(5)
         except Exception as exc:
+            LOG.exception('Error while running program')
             err_str = f'Error while renaming file {old_path}: {str(exc)}'
             LOG.error(err_str)
             break

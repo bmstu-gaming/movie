@@ -29,7 +29,7 @@ def recognition(input_str: str) -> List[int]:
                 numbers.append(int(num))
         for num in numbers:
             LOG.debug(f'{num = }')
-    except Exception as e:
-        LOG.error(f'An error occurred: {e}')
+    except Exception:
+        LOG.exception('Error while running program')
     LOG.debug(constants.LOG_FUNCTION_END.format(name = 'notation recognition'))
     return numbers
