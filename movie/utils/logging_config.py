@@ -8,7 +8,8 @@ LOG_CONFIG = {
     'version': 1,
     'formatters': {
         'file_log': {
-            'format': '%(asctime)s [%(levelname)s]\t%(message)s'
+            'format': '%(asctime)s [%(levelname)s]\t%(message)s',
+            'exc_info': True
         },
         'console_log': {
             'format': '%(message)s'

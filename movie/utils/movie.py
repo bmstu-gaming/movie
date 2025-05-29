@@ -3,9 +3,10 @@ import collections
 from datetime import datetime
 import os
 import re
+import subprocess
 from typing import List
+from typing import Optional
 from typing import Tuple
-from typing import Union
 
 import ass
 import chardet
@@ -54,9 +55,9 @@ class Movie():
         if stdout.stderr is not None:
             LOG.debug('stdout.stderr is not None')
             log_data = stdout.stderr
-        elif stdout.stdout is not None:
+        if stdout.stdout is not None:
             LOG.debug('stdout.stdout is not None')
-            log_data = stdout.stdout
+            log_data += stdout.stdout
 
         logs_folder = 'logs'
         is_exist = os.path.exists(logs_folder)
@@ -76,17 +77,53 @@ class Movie():
 
         return log_path_target
 
-    def __get_first_video_in_directory__(self) -> Union[str, None]:
-        video_files = self.__get_video_files__()
-        return video_files[0] if video_files else None
+    def __analyze_video_streams__(self, video_path: str) -> subprocess.CompletedProcess:
+        cmd_exec = [self.ffprobe_path, '-show_streams', video_path]
+        stdout = command.execute(cmd_exec)
 
-    def get_streams_and_log_file(self) -> str:
-        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'STREAMS AND LOG FILE'))
-        first_video = self.__get_first_video_in_directory__()
-        LOG.debug(f'{first_video = }')
-        if first_video is None:
-            return None
-        return self.__get_video_streams_and_log_file__(first_video)
+        self.__set_streams__(stdout.stdout)
+        return stdout
+
+    def __save_ffprobe_log__(self, output: str, video_name: str) -> None:
+        dt_string = datetime.now().strftime('%Y.%m.%d - %H.%M.%S')
+        LOG.debug(f'{dt_string = }')
+
+        log_data = output.stderr if output.stderr is not None else ""
+        log_data += output.stdout if output.stdout is not None else ""
+
+        logs_folder = 'logs'
+        os.makedirs(logs_folder, exist_ok=True)
+
+        log_path_target = os.path.join(logs_folder, f'{dt_string}-{video_name}.log')
+        with open(log_path_target, 'w', encoding='utf-8') as log_file:
+            log_file.write('\n'.join(log_data.split('\n')))
+
+    def analyze_video_file(self, video_file: str) -> None:
+        LOG.debug(constants.LOG_FUNCTION_START.format(name='ANALYZE VIDEO FILE'))
+
+        vid_path_source = os.path.join(self.movies_folder, video_file)
+        LOG.debug(f'{vid_path_source = }')
+
+        ffprobe_output = self.__analyze_video_streams__(vid_path_source)
+        self.__save_ffprobe_log__(ffprobe_output, video_file)
+
+        LOG.debug(constants.LOG_FUNCTION_END.format(name='ANALYZE VIDEO FILE'))
+
+    def analyze_first_video_file(self):
+        LOG.debug(constants.LOG_FUNCTION_START.format(name='ANALYZE FIRST VIDEO FILE'))
+
+        first_video_file = self.__get_first_video_in_directory__()
+        LOG.debug(f'{first_video_file = }')
+        if first_video_file is None:
+            return
+
+        vid_path_source = os.path.join(self.movies_folder, first_video_file)
+        LOG.debug(f'{vid_path_source = }')
+
+        ffprobe_output = self.__analyze_video_streams__(vid_path_source)
+        self.__save_ffprobe_log__(ffprobe_output, first_video_file)
+
+        LOG.debug(constants.LOG_FUNCTION_END.format(name='ANALYZE FIRST VIDEO FILE'))
 
     def __get_first_stream_of_type__(self,  selected_streams: List[int], stream_type: str) -> int:
         stream_indices = {stream.index for stream in self.streams}
@@ -94,15 +131,14 @@ class Movie():
         for selected_stream in selected_streams:
             if selected_stream in stream_indices:
                 corresponding_stream = next(stream for stream in self.streams if stream.index == selected_stream)
-                LOG.debug(f'{corresponding_stream} - {corresponding_stream.stream_type}')
                 if corresponding_stream.stream_type == stream_type:
+                    LOG.debug(f'{corresponding_stream} - {corresponding_stream.stream_type}')
                     return selected_stream
         return None
 
     def __get_default_streams__(self, selected_streams: List[int]) -> List[int]:
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'GET DEFAULT SELECTED STREAMS'))
 
-        LOG.debug(f'{selected_streams = }')
         default_streams = []
         default_stream_video = self.__get_first_stream_of_type__(selected_streams, constants.STREAM_TYPE_VIDEO)
         default_stream_audio = self.__get_first_stream_of_type__(selected_streams, constants.STREAM_TYPE_AUDIO)
@@ -117,7 +153,18 @@ class Movie():
         LOG.debug(constants.LOG_FUNCTION_END.format(name = 'GET DEFAULT SELECTED STREAMS'))
         return default_streams
 
-    def process_streams(self, selected_streams: List[int]):
+    def process_streams_to_video_files(self, map_video_streams):
+        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS TO VIDEO FILES'))
+        for video, streams in map_video_streams.items():
+            self.analyze_video_file(video)
+            streams_metadata = self.__get_process_streams_metadata__(streams)
+            LOG.debug(f'{video = }')
+            LOG.debug(f'{streams = }')
+            LOG.debug(f'{streams_metadata = }')
+            self.exec_command_for_file(video, streams_metadata)
+        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'PROCESS STREAMS TO VIDEO FILES'))
+
+    def __get_process_streams_metadata__(self, selected_streams: List[int]) -> list:
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS'))
         LOG.debug(f'{selected_streams = }')
 
@@ -142,18 +189,24 @@ class Movie():
                 LOG.debug(f'{stream_metadata = }')
                 streams_metadata.extend(stream_metadata)
         LOG.debug(f'{streams_metadata = }')
+        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'PROCESS STREAMS'))
 
-        video_files = self.__get_video_files__()
-        LOG.debug(f'{video_files = }')
+        return streams_metadata
 
-        self.exec_command_for_files(video_files, streams_metadata)
+    def process_streams_language_to_video_files(self, map_video_streams_language):
+        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS LANGUAGE TO VIDEO FILES'))
+        for video, streams_map in map_video_streams_language.items():
+            streams_language_metadata = self.__get_process_streams_language__metadata__(streams_map)
+            LOG.debug(f'{video = }')
+            LOG.debug(f'{streams_map = }')
+            LOG.debug(f'{streams_language_metadata = }')
+            self.exec_command_for_file(video, streams_language_metadata)
+        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'PROCESS STREAMS LANGUAGE TO VIDEO FILES'))
 
-    def process_streams_with_language(self, streams_languages: dict):
-        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS WITH LANGUAGE'))
+    def __get_process_streams_language__metadata__(self, streams_languages: dict):
+        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'PROCESS STREAMS LANGUAGE'))
         LOG.debug(f'{streams_languages = }')
-
         default_streams = self.__get_default_streams__(list(streams_languages.keys()))
-
         streams_metadata = []
         for i, key in enumerate(streams_languages):
             LOG.debug(f'{i = }')
@@ -167,15 +220,16 @@ class Movie():
                 stream_metadata.extend(
                     [f'-disposition:{i}', 'default',]
                 )
-
+            else:
+                stream_metadata.extend(
+                    [f'-disposition:{i}', '0',]
+                )
             LOG.debug(f'{stream_metadata = }')
             streams_metadata.extend(stream_metadata)
-
         LOG.debug(f'{streams_metadata = }')
-        video_files = self.__get_video_files__()
-        LOG.debug(f'{video_files = }')
+        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'PROCESS STREAMS LANGUAGE'))
 
-        self.exec_command_for_files(video_files, streams_metadata)
+        return streams_metadata
 
     def _natural_sort_key(self, s: str) -> list:
         def convert(text):
@@ -189,22 +243,28 @@ class Movie():
             if file_extension in files_type:
                 multimedia_files.append(f)
         multimedia_files.sort(key=self._natural_sort_key)
+        LOG.debug(f'{multimedia_files}')
         return multimedia_files
 
     def __get_audio_files__(self) -> List[str]:
         return self.__get_files_by_type__(constants.AUDIO)
 
     def __get_video_files__(self) -> List[str]:
+        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'VIDEO FILES IN FOLDER:'))
         return self.__get_files_by_type__(constants.VIDEO)
+
+    def __get_first_video_in_directory__(self) -> Optional[str]:
+        video_files = self.__get_video_files__()
+        return video_files[0] if video_files else None
 
     def __get_subtitle_files__(self) -> List[str]:
         return self.__get_files_by_type__(constants.SUBTITLE)
 
     def __get_srt_subtitle_files__(self) -> List[str]:
-        return self.__get_files_by_type__(constants.SUBTITLE)
+        return self.__get_files_by_type__(constants.SRT)
 
     def __get_ass_subtitle_files__(self) -> List[str]:
-        return self.__get_files_by_type__(constants.SUBTITLE)
+        return self.__get_files_by_type__(constants.ASS)
 
     def __get_image_files__(self) -> List[str]:
         return self.__get_files_by_type__(constants.IMAGE)
@@ -217,6 +277,7 @@ class Movie():
             constants.MKA:  ['copy'],
             constants.MP3:  ['libmp3lame', '-q:a', '2'],
             constants.OPUS: ['libopus', '-b:a', '128k'],
+            constants.WAV:  ['pcm_s16le'],
         }
         return codec_settings[audio_type]
 
@@ -244,11 +305,9 @@ class Movie():
     def set_external_audio_non_default(self):
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Remove default settings in external audio'))
 
-        audio_files = self.__get_audio_files__()
-        LOG.debug(f'{audio_files = }')
         cmd_exec = ['-disposition:a:0', '0']
-
-        self.exec_command_for_files(audio_files, cmd_exec)
+        for audio_file in self.__get_audio_files__():
+            self.exec_command_for_file(audio_file, cmd_exec)
 
         LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Remove default settings in external audio'))
 
@@ -258,27 +317,27 @@ class Movie():
         sub_list = [d for d in self.streams if d.stream_type == constants.STREAM_TYPE_SUBTITLE]
         return vid_list, aud_list, sub_list
 
-    def exec_command_for_files(self, multimedia_files: List[str], command_exec: List[str]):
-        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Execution command for files'))
-        for _, f in enumerate(multimedia_files):
-            _, file_extension = os.path.splitext(f)
-            path_source = os.path.join(self.movies_folder, f)
-            path_target = os.path.join(self.movies_folder, f'{self._filename_prefix}{file_extension}')
-            LOG.info(f'{f}')
-            LOG.debug(f'{path_target = }')
-            cmd_exec = [
-                self.ffmpeg_path,
-                '-i', path_source,
-                '-c', 'copy',
-                *command_exec,
-                path_target
-            ]
-            LOG.debug(f'{cmd_exec = }')
+    def exec_command_for_file(self, multimedia_file: str, command_exec: List[str]):
+        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Execution command for file'))
 
-            command.execute(cmd_exec)
-            files.restoring_target_filename_to_source(path_target, path_source)
+        _, file_extension = os.path.splitext(multimedia_file)
+        path_source = os.path.join(self.movies_folder, multimedia_file)
+        path_target = os.path.join(self.movies_folder, f'{self._filename_prefix}{file_extension}')
+        LOG.info(f'{multimedia_file}')
+        LOG.debug(f'{path_target = }')
+        cmd_exec = [
+            self.ffmpeg_path,
+            '-i', path_source,
+            '-c', 'copy',
+            *command_exec,
+            path_target
+        ]
+        LOG.debug(f'{cmd_exec = }')
 
-        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Execution command for files'))
+        command.execute(cmd_exec)
+        files.restoring_target_filename_to_source(path_target, path_source)
+
+        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Execution command for file'))
 
     def __is_series__(self) -> int:
         video_files = self.__get_video_files__()
@@ -331,7 +390,7 @@ class Movie():
             sub_path_source = os.path.join(self.movies_folder, f)
             sub_path_target = os.path.join(self.movies_folder, f'{filename}.ass')
 
-            subs = pysubs2.load(sub_path_source, encoding=self.__get_file_encoding__(sub_path_source))
+            subs = pysubs2.load(sub_path_source, encoding='utf-8')
             subs.save(sub_path_target, encoding='utf-8')
             sub_srt_path = os.path.join(self.movies_folder, filename + file_extension)
 
@@ -379,6 +438,7 @@ class Movie():
             self.ffmpeg_path,
             '-i', vid_path_source,
             '-map', '0:s:0',
+            '-c:s', 'copy',
             sub_path_target
         ]
         command.execute(cmd_exec)
@@ -406,7 +466,7 @@ class Movie():
                 cmd_exec = [
                     self.ffmpeg_path,
                     '-i', vid_path_source,
-                    '-map', '0', '-c', 'copy', '-sn',
+                    '-map', '0', '-c:s', 'copy', '-sn',
                     vid_path_target
                 ]
                 command.execute(cmd_exec)

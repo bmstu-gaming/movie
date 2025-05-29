@@ -12,9 +12,10 @@ def get_stream_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
         'Streams selection', prologue_text='select the type of indication for saving streams:', exit_menu_char='q')
 
     item_selected_streams = consolemenu.items.FunctionItem(
-        'Select Streams (simple)', scenarios.select_and_process_streams, args=[movie_obj])
+        'Select Streams (only streams indexes)', scenarios.select_and_process_streams, args=[movie_obj])
     item_selected_streams_and_language = consolemenu.items.FunctionItem(
-        'Select Streams (with language)', scenarios.select_and_process_streams_with_language, args=[movie_obj])
+        'Select Streams (streams indexes with language)',
+        scenarios.select_and_process_streams_with_language, args=[movie_obj])
 
     selection_stream_submenu.append_item(item_selected_streams)
     selection_stream_submenu.append_item(item_selected_streams_and_language)
