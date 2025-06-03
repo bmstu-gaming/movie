@@ -84,7 +84,7 @@ class Movie():
         self.__set_streams__(stdout.stdout)
         return stdout
 
-    def __save_ffprobe_log__(self, output: str, video_name: str) -> None:
+    def __save_ffprobe_log__(self, output: subprocess.CompletedProcess, video_name: str) -> None:
         dt_string = datetime.now().strftime('%Y.%m.%d - %H.%M.%S')
         LOG.debug(f'{dt_string = }')
 
@@ -125,7 +125,7 @@ class Movie():
 
         LOG.debug(constants.LOG_FUNCTION_END.format(name='ANALYZE FIRST VIDEO FILE'))
 
-    def __get_first_stream_of_type__(self,  selected_streams: List[int], stream_type: str) -> int:
+    def __get_first_stream_of_type__(self,  selected_streams: List[int], stream_type: str) -> Optional[int]:
         stream_indices = {stream.index for stream in self.streams}
         LOG.debug(f'{stream_type = }')
         for selected_stream in selected_streams:
@@ -438,7 +438,6 @@ class Movie():
             self.ffmpeg_path,
             '-i', vid_path_source,
             '-map', '0:s:0',
-            '-c:s', 'copy',
             sub_path_target
         ]
         command.execute(cmd_exec)
@@ -466,13 +465,13 @@ class Movie():
                 cmd_exec = [
                     self.ffmpeg_path,
                     '-i', vid_path_source,
-                    '-map', '0', '-c:s', 'copy', '-sn',
+                    '-map', '0', '-c', 'copy', '-sn',
                     vid_path_target
                 ]
                 command.execute(cmd_exec)
                 files.restoring_target_filename_to_source(vid_path_target, vid_path_source)
 
-    def __get_file_encoding__(self, file: str) -> str:
+    def __get_file_encoding__(self, file: str) -> Optional[str]:
         with open(file, 'rb') as f:
             result = chardet.detect(f.read())
         f.close()
