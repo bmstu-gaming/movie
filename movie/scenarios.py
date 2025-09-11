@@ -255,11 +255,19 @@ def subtitle_extract_to_ass(movie_obj: movie.Movie):
 Extracting subtitle stream to .ass file
         '''
     )
+    all_videos = movie_obj.__get_video_files__()
+    if not all_videos:
+        pu.println(f'There is no video file in movie folder: {movie_obj.movies_folder}')
+        return
+    movie_obj.analyze_video_file(all_videos[0])
+
+    _display_streams(pu, movie_obj)
+    input_streams = _get_input_streams(pu, movie_obj)
     try:
         if pu.confirm_answer('aa', message='Save subtitle track in video file?'):
-            movie_obj.extract_subtitle(keep_subtitles=True)
+            movie_obj.extract_subtitle(keep_subtitles=True, subtitle_streams_index=input_streams)
         else:
-            movie_obj.extract_subtitle()
+            movie_obj.extract_subtitle(subtitle_streams_index=input_streams)
         movie_obj.subs_convert_srt_to_ass()
     except Exception:
         LOG.exception('Error while running program')
@@ -291,6 +299,9 @@ def subtitle_ass_purification(movie_obj: movie.Movie):
 Making subtitle clear
         '''
     )
-    movie_obj.ass_subtitle_purification()
+    try:
+        movie_obj.ass_subtitle_purification()
+    except Exception:
+        LOG.exception('Error while running program')
 
     _function_end(pu)
