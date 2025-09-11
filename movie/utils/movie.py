@@ -433,39 +433,79 @@ class Movie():
         LOG.debug(f'{first_subtitle = }')
         self.__get_styles__(first_subtitle)
 
-    def __extract_subtitle__(self, vid_path_source: str, sub_path_target: str):
-        cmd_exec = [
-            self.ffmpeg_path,
-            '-i', vid_path_source,
-            '-map', '0:s:0',
-            sub_path_target
-        ]
-        command.execute(cmd_exec)
+    def __find_subtitle_stream__(self, subtitle_streams: List[stream.Stream], stream_index: int):
+        for subtitle_stream in subtitle_streams:
+            if subtitle_stream.index == stream_index:
+                return subtitle_stream
+        return None
 
-    def extract_subtitle(self, keep_subtitles=False):
+    def __get_subtitle_extension__(self, codec_name: str) -> str:
+        extension_map = {
+            'srt': '.srt',
+            'subrip': '.srt',
+            'ass': '.ass',
+            'ssa': '.ssa',
+            'mov_text': '.srt',
+            'webvtt': '.vtt',
+            'dvbsub': '.sub',
+            'dvdsub': '.sub',
+            'hdmv_pgs_subtitle': '.sup',
+            'pgssub': '.sup',
+        }
+        codec_name_lower = codec_name.lower() if codec_name else ''
+        subtitle_extension = extension_map.get(codec_name_lower, '.srt')
+
+        return subtitle_extension
+
+    def extract_subtitle(self, keep_subtitles=False, subtitle_streams_index: Optional[List[int]] = None):
         LOG.debug(
             constants.LOG_FUNCTION_START.format(
                 name = (f'EXTRACT {constants.STREAM_TYPE_SUBTITLE} FROM {constants.STREAM_TYPE_VIDEO}')
             )
         )
+        LOG.debug(f'{subtitle_streams_index = }')
+        _, _, subtitle_streams = self.__separate_media_streams__()
+        LOG.debug(f'{subtitle_streams = }')
         for f in self.__get_video_files__():
             filename, file_extension = os.path.splitext(f)
 
             vid_path_source = os.path.join(self.movies_folder, f)
-            sub_path_target = os.path.join(self.movies_folder, filename + constants.SRT)
             LOG.info(f'{f}')
-            LOG.debug(f'{sub_path_target = }')
 
-            self.__extract_subtitle__(vid_path_source, sub_path_target)
+            for subtitle_stream_index in subtitle_streams_index:
+                subtitle_stream = self.__find_subtitle_stream__(subtitle_streams, subtitle_stream_index)
+                if subtitle_stream is None:
+                    break
+                subtitle_extension = self.__get_subtitle_extension__(subtitle_stream.codec_name)
+                sub_path_target = os.path.join(
+                    self.movies_folder,
+                    f'{filename}.{subtitle_stream_index}{subtitle_extension}'
+                )
+                LOG.debug(f'{sub_path_target = }')
+
+                cmd_exec = [
+                    self.ffmpeg_path,
+                    '-i', vid_path_source,
+                    '-map', f'0:{subtitle_stream_index}',
+                    '-c:s', subtitle_stream.codec_name,
+                    sub_path_target
+                ]
+                command.execute(cmd_exec)
 
             if not keep_subtitles:
                 vid_path_target = os.path.join(
                     self.movies_folder, f'{self._filename_prefix}.no_subs{file_extension}')
                 LOG.debug(f'{vid_path_target = }')
+                exclude_subtitle_streams = []
+                for subtitle_stream_index in subtitle_streams_index:
+                    exclude_subtitle_streams.extend(['-map', f'-0:{subtitle_stream_index}'])
+
                 cmd_exec = [
                     self.ffmpeg_path,
                     '-i', vid_path_source,
-                    '-map', '0', '-c', 'copy', '-sn',
+                    '-map', '0', 
+                    *exclude_subtitle_streams,
+                    '-c', 'copy',
                     vid_path_target
                 ]
                 command.execute(cmd_exec)
@@ -610,11 +650,15 @@ class Movie():
         ) as sub_file_source:
             doc = ass.parse(sub_file_source)
 
+            play_res_x = doc.info.get('PlayResX', '640')
+            play_res_y = doc.info.get('PlayResY', '360')
             script_info_dict = {
                 'WrapStyle': '0',
                 'ScaledBorderAndShadow': 'yes',
                 'Collisions': 'Normal',
                 'ScriptType': 'v4.00+',
+                'PlayResX': play_res_x,
+                'PlayResY': play_res_y,
             }
             doc.info = ass.ScriptInfoSection('Script Info', collections.OrderedDict(script_info_dict))
             LOG.debug(f'{doc.info = }')
@@ -622,11 +666,11 @@ class Movie():
             main_subtitle = ass.line.Style(
                 name='Main',
                 fontname='Arial',
-                fontsize=20.0,
-                primary_color=ass.data.Color(r=0xff, g=0xff, b=0xff, a=0x00),
-                secondary_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
-                outline_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
-                back_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+                fontsize=18.0,
+                primary_color=ass.data.Color(a=0x00, r=0xff, g=0xff, b=0xff),
+                secondary_color=ass.data.Color(a=0x00, r=0x00, g=0x00, b=0x00),
+                outline_color=ass.data.Color(a=0x00, r=0x00, g=0x00, b=0x00),
+                back_color=ass.data.Color(a=0x00, r=0x00, g=0x00, b=0x00),
                 bold=True,
                 italic=False,
                 underline=False,
@@ -644,56 +688,21 @@ class Movie():
                 margin_v=10,
                 encoding=0
             )
-            signs_subtitle = ass.line.Style(
-                name='Signs',
-                fontname='Arial',
-                fontsize=14.0,
-                primary_color=ass.data.Color(r=0xff, g=0xff, b=0xff, a=0x00),
-                secondary_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
-                outline_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
-                back_color=ass.data.Color(r=0x00, g=0x00, b=0x00, a=0x00),
-                bold=False,
-                italic=False,
-                underline=False,
-                strike_out=False,
-                scale_x=100.0,
-                scale_y=100.0,
-                spacing=0.0,
-                angle=0.0,
-                border_style=1,
-                outline=1.0,
-                shadow=0.0,
-                alignment=8,
-                margin_l=0,
-                margin_r=0,
-                margin_v=10,
-                encoding=0
-            )
-            subs = [main_subtitle, signs_subtitle]
-            doc.styles = ass.section.StylesSection('V4+ Styles', subs)
+            new_styles = [main_subtitle]
+            for style in doc.styles:
+                style.fontname = 'Arial'
+                style.fontsize = 18.0
+                new_styles.append(style)
+
+            doc.styles = ass.section.StylesSection('V4+ Styles', new_styles)
             LOG.debug(f'{doc.styles = }')
 
             frequent_style = str(next(iter(style_occurrences)))
             LOG.debug(f'{frequent_style = }')
 
-            set_signs_style_next_event = False
             for event in doc.events:
-                clear_text = re.sub(constants.SUBTITLE_TAGS_REGEX, '', event.text).strip()
-
-                if set_signs_style_next_event:
-                    event.style = 'Signs'
-                    set_signs_style_next_event = False
-
-                if re.search(constants.SUBTITLE_GRAPHIC_REGEX, event.text):
-                    event.text = ''
-                    set_signs_style_next_event = True
-                else:
-                    event.text = clear_text
-
-                if re.match(rf'^{frequent_style}', string=event.style):
+                if event.style == frequent_style:
                     event.style = 'Main'
-                else:
-                    event.style = 'Signs'
 
             with open(sub_path_target, 'w', encoding='utf_8_sig') as sub_file_target:
                 doc.dump_file(sub_file_target)

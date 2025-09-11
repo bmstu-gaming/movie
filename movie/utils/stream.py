@@ -8,6 +8,7 @@ class Stream:
         self.index = None
         self._codec_type = None
         self.tags = {}
+        self.codec_name = None
 
         for line in stream_data.strip().split('\n'):
             if '=' in line:
@@ -22,6 +23,8 @@ class Stream:
                 elif key.startswith('TAG:'):
                     tag_key = key[4:]
                     self.tags[tag_key] = value
+                elif key == 'codec_name':
+                    self.codec_name = value
 
     def __repr__(self):
         title = self.tags.get('title', f'Track {self.index}')
