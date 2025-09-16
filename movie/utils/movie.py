@@ -433,7 +433,8 @@ class Movie():
         LOG.debug(f'{first_subtitle = }')
         self.__get_styles__(first_subtitle)
 
-    def __find_subtitle_stream__(self, subtitle_streams: List[stream.Stream], stream_index: int):
+    def __find_subtitle_stream_by_index__(self, stream_index: int):
+        _, _, subtitle_streams = self.__separate_media_streams__()
         for subtitle_stream in subtitle_streams:
             if subtitle_stream.index == stream_index:
                 return subtitle_stream
@@ -457,36 +458,39 @@ class Movie():
 
         return subtitle_extension
 
-    def extract_subtitle(self, keep_subtitles=False, subtitle_streams_index: Optional[List[int]] = None):
+    def extract_subtitle(self, keep_subtitles=False, streams_index: Optional[List[int]] = None):
         LOG.debug(
             constants.LOG_FUNCTION_START.format(
                 name = (f'EXTRACT {constants.STREAM_TYPE_SUBTITLE} FROM {constants.STREAM_TYPE_VIDEO}')
             )
         )
-        LOG.debug(f'{subtitle_streams_index = }')
-        _, _, subtitle_streams = self.__separate_media_streams__()
+        LOG.debug(f'{streams_index = }')
+
+        subtitle_streams = []
+        for stream_index in streams_index:
+            subtitle_stream = self.__find_subtitle_stream_by_index__(stream_index)
+            if subtitle_stream:
+                subtitle_streams.append(subtitle_stream)
         LOG.debug(f'{subtitle_streams = }')
+
         for f in self.__get_video_files__():
             filename, file_extension = os.path.splitext(f)
 
             vid_path_source = os.path.join(self.movies_folder, f)
             LOG.info(f'{f}')
 
-            for subtitle_stream_index in subtitle_streams_index:
-                subtitle_stream = self.__find_subtitle_stream__(subtitle_streams, subtitle_stream_index)
-                if subtitle_stream is None:
-                    break
+            for subtitle_stream in subtitle_streams:
                 subtitle_extension = self.__get_subtitle_extension__(subtitle_stream.codec_name)
                 sub_path_target = os.path.join(
                     self.movies_folder,
-                    f'{filename}.{subtitle_stream_index}{subtitle_extension}'
+                    f'{filename}.{subtitle_stream.index}{subtitle_extension}'
                 )
                 LOG.debug(f'{sub_path_target = }')
 
                 cmd_exec = [
                     self.ffmpeg_path,
                     '-i', vid_path_source,
-                    '-map', f'0:{subtitle_stream_index}',
+                    '-map', f'0:{subtitle_stream.index}',
                     '-c:s', subtitle_stream.codec_name,
                     sub_path_target
                 ]
@@ -496,9 +500,11 @@ class Movie():
                 vid_path_target = os.path.join(
                     self.movies_folder, f'{self._filename_prefix}.no_subs{file_extension}')
                 LOG.debug(f'{vid_path_target = }')
+
                 exclude_subtitle_streams = []
-                for subtitle_stream_index in subtitle_streams_index:
-                    exclude_subtitle_streams.extend(['-map', f'-0:{subtitle_stream_index}'])
+                for subtitle_stream in subtitle_streams:
+                    exclude_subtitle_streams.extend(['-map', f'-0:{subtitle_stream.index}'])
+                LOG.debug(f'{exclude_subtitle_streams = }')
 
                 cmd_exec = [
                     self.ffmpeg_path,

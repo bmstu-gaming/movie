@@ -6,6 +6,7 @@ import colors
 import consolemenu
 
 from movie.utils.logging_config import LOG
+from movie.utils import constants
 from movie.utils import movie
 from movie.utils import notation
 from movie.utils import stream
@@ -43,7 +44,15 @@ def _display_streams(
         pu: consolemenu.PromptUtils,
         movie_obj: movie.Movie,
         input_streams: Optional[List[int]] = None,
+        stream_type: Optional[List[str]] = None,
 ) -> None:
+    if stream_type is None:
+        stream_type = [
+            constants.STREAM_TYPE_VIDEO,
+            constants.STREAM_TYPE_AUDIO,
+            constants.STREAM_TYPE_SUBTITLE,
+        ]
+
     video_streams, audio_streams, subtitle_streams = movie_obj.__separate_media_streams__()
 
     if input_streams is not None:
@@ -56,9 +65,12 @@ def _display_streams(
     LOG.debug(f'{subtitle_streams = }')
 
     pu.println(f'{colors.color("#: (Language) Title", fg="#FFFFFF")}')
-    _color_print_streams(pu, 'Video streams', video_streams, '#FFFF00')
-    _color_print_streams(pu, 'Audio streams', audio_streams, '#00FFFF')
-    _color_print_streams(pu, 'Subtitle streams', subtitle_streams, '#FF00FF')
+    if constants.STREAM_TYPE_VIDEO in stream_type:
+        _color_print_streams(pu, 'Video streams', video_streams, '#FFFF00')
+    if constants.STREAM_TYPE_AUDIO in stream_type:
+        _color_print_streams(pu, 'Audio streams', audio_streams, '#00FFFF')
+    if constants.STREAM_TYPE_SUBTITLE in stream_type:
+        _color_print_streams(pu, 'Subtitle streams', subtitle_streams, '#FF00FF')
     pu.println('')
 
 
@@ -120,8 +132,7 @@ def _get_input_streams(pu: consolemenu.PromptUtils, movie_obj: movie.Movie) -> O
 
         pu.println(f'\nStreams to save: {input_streams}')
         _display_streams(pu, movie_obj, input_streams)
-        if pu.confirm_answer(input_streams):
-            return input_streams
+        return input_streams
 
 
 def _get_streams_status(pu: consolemenu.PromptUtils) -> Optional[str]:
@@ -261,13 +272,15 @@ Extracting subtitle stream to .ass file
         return
     movie_obj.analyze_video_file(all_videos[0])
 
-    _display_streams(pu, movie_obj)
+    _display_streams(pu, movie_obj, stream_type=constants.STREAM_TYPE_SUBTITLE)
     input_streams = _get_input_streams(pu, movie_obj)
+    if input_streams is None:
+        return
     try:
         if pu.confirm_answer('aa', message='Save subtitle track in video file?'):
-            movie_obj.extract_subtitle(keep_subtitles=True, subtitle_streams_index=input_streams)
+            movie_obj.extract_subtitle(keep_subtitles=True, streams_index=input_streams)
         else:
-            movie_obj.extract_subtitle(subtitle_streams_index=input_streams)
+            movie_obj.extract_subtitle(streams_index=input_streams)
         movie_obj.subs_convert_srt_to_ass()
     except Exception:
         LOG.exception('Error while running program')
