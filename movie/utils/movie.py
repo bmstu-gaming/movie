@@ -650,57 +650,101 @@ class Movie():
             self.__write_number__(f, preview_idx)
             preview_idx += 1
 
+    def __get_play_res__(self, info_dict: any, key: str, default_value: str) -> int:
+        value = info_dict.get(key)
+        if value is None or str(value).strip() == "":
+            return default_value
+        try:
+            return int(value)
+        except ValueError:
+            return default_value
+
+    def __get_scale_style__(self, res_x: int, res_y: int):
+        base_style = ass.line.Style(
+            name='Main',
+            fontname='Arial',
+            fontsize=18.0,
+            primary_color=ass.data.Color(a=0x00, r=0xff, g=0xff, b=0xff),
+            secondary_color=ass.data.Color(a=0x00, r=0x00, g=0x00, b=0x00),
+            outline_color=ass.data.Color(a=0x00, r=0x00, g=0x00, b=0x00),
+            back_color=ass.data.Color(a=0x00, r=0x00, g=0x00, b=0x00),
+            bold=True,
+            italic=False,
+            underline=False,
+            strike_out=False,
+            scale_x=100.0,
+            scale_y=100.0,
+            spacing=0.0,
+            angle=0.0,
+            border_style=1,
+            outline=1.0,
+            shadow=0.0,
+            alignment=2,
+            margin_l=0,
+            margin_r=0,
+            margin_v=10,
+            encoding=0
+        )
+
+        k_x = res_x / constants.SUBTITLE_DEFAULT_PLAY_RES_X
+        k_y = res_y / constants.SUBTITLE_DEFAULT_PLAY_RES_Y
+
+        return ass.line.Style(
+            name=base_style.name,
+            fontname=base_style.fontname,
+            fontsize=round(base_style.fontsize * k_y),
+            primary_color=base_style.primary_color,
+            secondary_color=base_style.secondary_color,
+            outline_color=base_style.outline_color,
+            back_color=base_style.back_color,
+            bold=base_style.bold,
+            italic=base_style.italic,
+            underline=base_style.underline,
+            strike_out=base_style.strike_out,
+            scale_x=base_style.scale_x,
+            scale_y=base_style.scale_y,
+            spacing=base_style.spacing,
+            angle=base_style.angle,
+            border_style=base_style.border_style,
+            outline=round(base_style.outline * k_y),
+            shadow=base_style.shadow,
+            alignment=base_style.alignment,
+            margin_l=round(base_style.margin_l * k_x),
+            margin_r=round(base_style.margin_r * k_x),
+            margin_v=round(base_style.margin_v * k_y),
+            encoding=base_style.encoding
+        )
+
     def __subtitle_purification__(self, sub_path_source: str, sub_path_target: str, style_occurrences: dict):
         with codecs.open(
             sub_path_source, mode='r', encoding=self.__get_file_encoding__(sub_path_source)
         ) as sub_file_source:
             doc = ass.parse(sub_file_source)
 
-            play_res_x = doc.info.get('PlayResX', '640')
-            play_res_y = doc.info.get('PlayResY', '360')
+            play_res_x = self.__get_play_res__(doc.info, 'PlayResX', constants.SUBTITLE_DEFAULT_PLAY_RES_X)
+            play_res_y = self.__get_play_res__(doc.info, 'PlayResY', constants.SUBTITLE_DEFAULT_PLAY_RES_Y)
+
             script_info_dict = {
                 'WrapStyle': '0',
                 'ScaledBorderAndShadow': 'yes',
                 'Collisions': 'Normal',
                 'ScriptType': 'v4.00+',
-                'PlayResX': play_res_x,
-                'PlayResY': play_res_y,
+                'PlayResX': str(play_res_x),
+                'PlayResY': str(play_res_y),
             }
             doc.info = ass.ScriptInfoSection('Script Info', collections.OrderedDict(script_info_dict))
             LOG.debug(f'{doc.info = }')
 
-            main_subtitle = ass.line.Style(
-                name='Main',
-                fontname='Arial',
-                fontsize=18.0,
-                primary_color=ass.data.Color(a=0x00, r=0xff, g=0xff, b=0xff),
-                secondary_color=ass.data.Color(a=0x00, r=0x00, g=0x00, b=0x00),
-                outline_color=ass.data.Color(a=0x00, r=0x00, g=0x00, b=0x00),
-                back_color=ass.data.Color(a=0x00, r=0x00, g=0x00, b=0x00),
-                bold=True,
-                italic=False,
-                underline=False,
-                strike_out=False,
-                scale_x=100.0,
-                scale_y=100.0,
-                spacing=0.0,
-                angle=0.0,
-                border_style=1,
-                outline=1.0,
-                shadow=0.0,
-                alignment=2,
-                margin_l=0,
-                margin_r=0,
-                margin_v=10,
-                encoding=0
+            main_subtitle_style = self.__get_scale_style__(
+                res_x=play_res_x,
+                res_y=play_res_y,
             )
-            new_styles = [main_subtitle]
-            for style in doc.styles:
-                style.fontname = 'Arial'
-                style.fontsize = 18.0
-                new_styles.append(style)
+            all_styles = [main_subtitle_style]
 
-            doc.styles = ass.section.StylesSection('V4+ Styles', new_styles)
+            for style in doc.styles:
+                all_styles.append(style)
+
+            doc.styles = ass.section.StylesSection('V4+ Styles', all_styles)
             LOG.debug(f'{doc.styles = }')
 
             frequent_style = str(next(iter(style_occurrences)))
