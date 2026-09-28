@@ -650,7 +650,7 @@ class Movie():
             self.__write_number__(f, preview_idx)
             preview_idx += 1
 
-    def __get_play_res__(self, info_dict: any, key: str, default_value: str) -> int:
+    def __get_play_res__(self, info_dict: dict, key: str, default_value: int) -> int:
         value = info_dict.get(key)
         if value is None or str(value).strip() == "":
             return default_value
@@ -661,7 +661,7 @@ class Movie():
 
     def __get_scale_style__(self, res_x: int, res_y: int):
         base_style = ass.line.Style(
-            name='Main',
+            name=constants.SUBTITLE_DEFAULT_STYLE_NAME,
             fontname='Arial',
             fontsize=18.0,
             primary_color=ass.data.Color(a=0x00, r=0xff, g=0xff, b=0xff),
@@ -716,48 +716,38 @@ class Movie():
         )
 
     def __subtitle_purification__(self, sub_path_source: str, sub_path_target: str, style_occurrences: dict):
-        with codecs.open(
-            sub_path_source, mode='r', encoding=self.__get_file_encoding__(sub_path_source)
-        ) as sub_file_source:
+        with codecs.open(sub_path_source, mode='r', encoding=self.__get_file_encoding__(sub_path_source)) as sub_file_source:
             doc = ass.parse(sub_file_source)
 
-            play_res_x = self.__get_play_res__(doc.info, 'PlayResX', constants.SUBTITLE_DEFAULT_PLAY_RES_X)
-            play_res_y = self.__get_play_res__(doc.info, 'PlayResY', constants.SUBTITLE_DEFAULT_PLAY_RES_Y)
+        play_res_x = self.__get_play_res__(doc.info, 'PlayResX', constants.SUBTITLE_DEFAULT_PLAY_RES_X)
+        play_res_y = self.__get_play_res__(doc.info, 'PlayResY', constants.SUBTITLE_DEFAULT_PLAY_RES_Y)
 
-            script_info_dict = {
-                'WrapStyle': '0',
-                'ScaledBorderAndShadow': 'yes',
-                'Collisions': 'Normal',
-                'ScriptType': 'v4.00+',
-                'PlayResX': str(play_res_x),
-                'PlayResY': str(play_res_y),
-            }
-            doc.info = ass.ScriptInfoSection('Script Info', collections.OrderedDict(script_info_dict))
-            LOG.debug(f'{doc.info = }')
+        doc.info['WrapStyle'] = '0'
+        doc.info['ScaledBorderAndShadow'] = 'yes'
+        doc.info['Collisions'] = 'Normal'
+        doc.info['ScriptType'] = 'v4.00+'
+        doc.info['PlayResX'] = str(play_res_x)
+        doc.info['PlayResY'] = str(play_res_y)
+        LOG.debug(f'Updated doc.info: {dict(doc.info)}')
 
-            main_subtitle_style = self.__get_scale_style__(
-                res_x=play_res_x,
-                res_y=play_res_y,
-            )
-            all_styles = [main_subtitle_style]
+        main_subtitle_style = self.__get_scale_style__(res_x=play_res_x, res_y=play_res_y)
 
-            for style in doc.styles:
+        all_styles = [main_subtitle_style]
+        for style in doc.styles:
+            if style.name != main_subtitle_style.name:
                 all_styles.append(style)
 
-            doc.styles = ass.section.StylesSection('V4+ Styles', all_styles)
-            LOG.debug(f'{doc.styles = }')
+        doc.styles = ass.section.StylesSection('V4+ Styles', all_styles)
+        LOG.debug(f'{doc.styles = }')
 
-            frequent_style = str(next(iter(style_occurrences)))
-            LOG.debug(f'{frequent_style = }')
+        frequent_style = str(next(iter(style_occurrences)))
+        LOG.debug(f'{frequent_style = }')
+        for event in doc.events:
+            if event.style == frequent_style:
+                event.style = main_subtitle_style.name
 
-            for event in doc.events:
-                if event.style == frequent_style:
-                    event.style = 'Main'
-
-            with open(sub_path_target, 'w', encoding='utf_8_sig') as sub_file_target:
-                doc.dump_file(sub_file_target)
-            sub_file_target.close()
-        sub_file_source.close()
+        with open(sub_path_target, 'w', encoding='utf_8_sig') as sub_file_target:
+            doc.dump_file(sub_file_target)
 
         files.remove(sub_path_source)
 
