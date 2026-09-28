@@ -1,5 +1,4 @@
 import codecs
-import collections
 from datetime import datetime
 import os
 import re
@@ -716,7 +715,9 @@ class Movie():
         )
 
     def __subtitle_purification__(self, sub_path_source: str, sub_path_target: str, style_occurrences: dict):
-        with codecs.open(sub_path_source, mode='r', encoding=self.__get_file_encoding__(sub_path_source)) as sub_file_source:
+        with codecs.open(
+            sub_path_source, mode='r', encoding=self.__get_file_encoding__(sub_path_source)
+        ) as sub_file_source:
             doc = ass.parse(sub_file_source)
 
         play_res_x = self.__get_play_res__(doc.info, 'PlayResX', constants.SUBTITLE_DEFAULT_PLAY_RES_X)
