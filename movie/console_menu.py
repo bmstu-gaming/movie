@@ -96,7 +96,7 @@ def get_subtitle_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
 
 def get_main_menu(movie_obj: Movie) -> consolemenu.ConsoleMenu:
     menu = consolemenu.ConsoleMenu('Main menu', prologue_text=f'logs in: {constants.LOG_FILE}', exit_menu_char='q')
-    
+
     item_update_config = consolemenu.items.FunctionItem(
         'Update config', scenarios.common_call, args=[movie_obj, config.update_config])
     menu.append_item(item_update_config)
@@ -124,7 +124,7 @@ def get_main_menu(movie_obj: Movie) -> consolemenu.ConsoleMenu:
     item_renaming = consolemenu.items.FunctionItem(
         'Renaming files', scenarios.common_call, args=[movie_obj, Movie.rename_files], menu_char='r')
     menu.append_item(item_renaming)
-    
+
     return menu
 
 

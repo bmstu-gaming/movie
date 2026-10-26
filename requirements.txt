@@ -6,3 +6,4 @@ pysubs2===1.6.1
 Pillow===10.1.0
 deep_translator===1.11.4
 pyinstaller===6.22.3
+pylint===4.1.3

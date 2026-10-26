@@ -263,50 +263,88 @@ def select_and_process_streams_with_language(movie_obj: movie.Movie):
     _function_end(pu)
 
 
-def extract_tracks_to_external_file(movie_obj: movie.Movie, stream_type: str, audio_type: Optional[str] = None) -> None:
-    pu = consolemenu.PromptUtils(consolemenu.Screen())
+def _print_extract_header(
+        pu: consolemenu.PromptUtils,
+        stream_type: str,
+        audio_type: Optional[str] = None,
+) -> bool:
     if stream_type == constants.STREAM_TYPE_SUBTITLE:
-        pu.println(
-            '''
+        pu.println('''
 Extracting subtitle stream to external file
-            '''
-)
+        ''')
     elif stream_type == constants.STREAM_TYPE_AUDIO:
-        pu.println(
-            f'''
+        pu.println(f'''
 Extracting audio stream to external {audio_type} file
-            '''
-)
+        ''')
     else:
-        return
+        return False
+    return True
 
+
+def _check_videos_and_display_streams(
+        pu: consolemenu.PromptUtils,
+        movie_obj: movie.Movie,
+        stream_type: str,
+) -> bool:
     all_videos = movie_obj.__get_video_files__()
     if not all_videos:
         pu.println(f'There is no video file in movie folder: {movie_obj.movies_folder}')
-        return
+        return False
     movie_obj.analyze_first_video_file()
     _display_streams(pu, movie_obj, stream_type=[stream_type])
+    return True
+
+
+def _process_subtitle_tracks(
+        movie_obj: movie.Movie,
+        pu: consolemenu.PromptUtils,
+        input_streams: List[int],
+) -> None:
+    try:
+        if pu.confirm_answer('aa', message='Save subtitle track in video file?'):
+            movie_obj.extract_subtitle_from_video_files(streams_index=input_streams, keep_subtitles=True)
+        else:
+            movie_obj.extract_subtitle_from_video_files(streams_index=input_streams)
+        movie_obj.subs_convert_srt_to_ass()
+    except Exception:
+        LOG.exception('Error while running program')
+
+
+def _process_audio_tracks(
+        movie_obj: movie.Movie,
+        pu: consolemenu.PromptUtils,
+        audio_type: Optional[str],
+        input_streams: List[int],
+) -> None:
+    try:
+        if pu.confirm_answer('aa', message='Save audio track in video file?'):
+            movie_obj.extract_audio_from_video_files(audio_type, streams_index=input_streams, keep_audio=True)
+        else:
+            movie_obj.extract_audio_from_video_files(audio_type, streams_index=input_streams)
+    except Exception:
+        LOG.exception('Error while running program')
+
+
+def extract_tracks_to_external_file(
+        movie_obj: movie.Movie,
+        stream_type: str,
+        audio_type: Optional[str] = None,
+) -> None:
+    pu = consolemenu.PromptUtils(consolemenu.Screen())
+    if not _print_extract_header(pu, stream_type, audio_type):
+        return
+
+    if not _check_videos_and_display_streams(pu, movie_obj, stream_type):
+        return
+
     input_streams = _get_input_streams(pu, movie_obj, [stream_type])
     if input_streams is None:
         return
 
     if stream_type == constants.STREAM_TYPE_SUBTITLE:
-        try:
-            if pu.confirm_answer('aa', message='Save subtitle track in video file?'):
-                movie_obj.extract_subtitle_from_video_files(streams_index=input_streams, keep_subtitles=True)
-            else:
-                movie_obj.extract_subtitle_from_video_files(streams_index=input_streams)
-            movie_obj.subs_convert_srt_to_ass()
-        except Exception:
-            LOG.exception('Error while running program')
+        _process_subtitle_tracks(movie_obj, pu, input_streams)
     elif stream_type == constants.STREAM_TYPE_AUDIO:
-        try:
-            if pu.confirm_answer('aa', message='Save audio track in video file?'):
-                movie_obj.extract_audio_from_video_files(audio_type, streams_index=input_streams, keep_audio=True)
-            else:
-                movie_obj.extract_audio_from_video_files(audio_type, streams_index=input_streams)
-        except Exception:
-            LOG.exception('Error while running program')
+        _process_audio_tracks(movie_obj, pu, audio_type, input_streams)
 
     _function_end(pu)
 

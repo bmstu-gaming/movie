@@ -231,8 +231,13 @@ class Movie():
         return [convert(c) for c in re.split('([0-9]+)', s)]
 
     def __get_files_by_type__(self, files_type) -> List[str]:
+        files_type = files_type if isinstance(files_type, (list, tuple)) else [files_type]
         multimedia_files = []
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
+            full_path = os.path.join(self.movies_folder, f)
+            if not os.path.isfile(full_path):
+                continue
+
             _, file_extension = os.path.splitext(f)
             if file_extension in files_type:
                 multimedia_files.append(f)
@@ -466,15 +471,17 @@ class Movie():
         LOG.debug(f'{first_subtitle = }')
         self.__get_styles__(first_subtitle)
 
-    def __find_and_get_type_stream_by_index(self, stream_type, stream_index: int):
+    def __find_and_get_type_stream_by_index(self, stream_type, stream_index: int) -> Optional[stream.Stream]:
         if stream_type == constants.STREAM_TYPE_AUDIO:
-            _, streams, _ = self.__separate_media_streams__()
+            _, media_streams, _ = self.__separate_media_streams__()
         elif stream_type == constants.STREAM_TYPE_SUBTITLE:
-            _, _, streams = self.__separate_media_streams__()
+            _, _, media_streams = self.__separate_media_streams__()
+        else:
+            return None
 
-        for stream in streams:
-            if stream.index == stream_index:
-                return stream
+        for media_stream in media_streams:
+            if media_stream.index == stream_index:
+                return media_stream
         return None
 
     def __get_subtitle_extension__(self, codec_name: str) -> str:
