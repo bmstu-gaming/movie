@@ -1,4 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
+import shutil
+import os
 
 block_cipher = None
 
@@ -6,9 +8,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        ('config.ini', '.'),
-    ],
+    datas=[],
     hiddenimports=[
         'pysubs2',
         'ass',
@@ -55,3 +55,7 @@ exe = EXE(
     entitlements_file=None,
     icon=None,
 )
+
+dist_dir = os.path.join(os.getcwd(), 'dist')
+if os.path.exists('config.ini'):
+    shutil.copy2('config.ini', os.path.join(dist_dir, 'config.ini'))
