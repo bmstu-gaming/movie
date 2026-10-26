@@ -115,12 +115,7 @@ class Movie():
         LOG.debug(f'{first_video_file = }')
         if first_video_file is None:
             return
-
-        vid_path_source = os.path.join(self.movies_folder, first_video_file)
-        LOG.debug(f'{vid_path_source = }')
-
-        ffprobe_output = self.__analyze_video_streams__(vid_path_source)
-        self.__save_ffprobe_log__(ffprobe_output, first_video_file)
+        self.analyze_video_file(first_video_file)
 
         LOG.debug(constants.LOG_FUNCTION_END.format(name='ANALYZE FIRST VIDEO FILE'))
 
@@ -236,8 +231,13 @@ class Movie():
         return [convert(c) for c in re.split('([0-9]+)', s)]
 
     def __get_files_by_type__(self, files_type) -> List[str]:
+        files_type = files_type if isinstance(files_type, (list, tuple)) else [files_type]
         multimedia_files = []
         for _, f in enumerate(os.listdir(self.movies_folder), start=1):
+            full_path = os.path.join(self.movies_folder, f)
+            if not os.path.isfile(full_path):
+                continue
+
             _, file_extension = os.path.splitext(f)
             if file_extension in files_type:
                 multimedia_files.append(f)
@@ -280,24 +280,63 @@ class Movie():
         }
         return codec_settings[audio_type]
 
-    def extract_audio_from_video_files(self, audio_type: str) -> None:
+    def extract_audio_from_video_files(
+            self,
+            audio_type: str,
+            streams_index: Optional[List[int]] = None,
+            keep_audio: bool = False,
+    ) -> None:
         LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Extract audio from video files'))
 
-        video_files = self.__get_video_files__()
-        for f in video_files:
+        LOG.debug(f'{audio_type = }')
+        LOG.debug(f'{streams_index = }')
+        LOG.debug(f'{keep_audio = }')
+
+        audio_streams = self.__select_streams_by_type__(
+            constants.STREAM_TYPE_AUDIO,
+            streams_index,
+        )
+        if audio_streams is None:
+            return
+
+        for f in self.__get_video_files__():
             LOG.info(f'{f}')
-            file_name, _ = os.path.splitext(f)
+            file_name, file_extension = os.path.splitext(f)
             path_source = os.path.join(self.movies_folder, f)
-            path_target = os.path.join(self.movies_folder, f'{file_name}{audio_type}')
             audio_codec = self.__get_codec_by_audio_type__(audio_type)
-            cmd_exec = [
-                self.ffmpeg_path,
-                '-i', path_source,
-                '-vn',  '-acodec', *audio_codec,
-                path_target
-            ]
-            LOG.debug(f'{cmd_exec = }')
-            command.execute(cmd_exec)
+
+            for audio_stream in audio_streams:
+                path_target = os.path.join(self.movies_folder, f'{file_name}.{audio_stream.index}{audio_type}')
+                cmd_exec = [
+                    self.ffmpeg_path,
+                    '-i', path_source,
+                    '-map', f'0:{audio_stream.index}',
+                    '-acodec', *audio_codec,
+                    path_target
+                ]
+                LOG.debug(f'{cmd_exec = }')
+                command.execute(cmd_exec)
+
+            if not keep_audio:
+                vid_path_target = os.path.join(
+                    self.movies_folder, f'{self._filename_prefix}.no_audio{file_extension}')
+                LOG.debug(f'{vid_path_target = }')
+
+                exclude_audio_streams = []
+                for audio_stream in audio_streams:
+                    exclude_audio_streams.extend(['-map', f'-0:{audio_stream.index}'])
+                LOG.debug(f'{exclude_audio_streams = }')
+
+                cmd_exec = [
+                    self.ffmpeg_path,
+                    '-i', path_source,
+                    '-map', '0',
+                    *exclude_audio_streams,
+                    '-c', 'copy',
+                    vid_path_target
+                ]
+                command.execute(cmd_exec)
+                files.restoring_target_filename_to_source(vid_path_target, path_source)
 
         LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Extract audio from video files'))
 
@@ -432,11 +471,17 @@ class Movie():
         LOG.debug(f'{first_subtitle = }')
         self.__get_styles__(first_subtitle)
 
-    def __find_subtitle_stream_by_index__(self, stream_index: int):
-        _, _, subtitle_streams = self.__separate_media_streams__()
-        for subtitle_stream in subtitle_streams:
-            if subtitle_stream.index == stream_index:
-                return subtitle_stream
+    def __find_and_get_type_stream_by_index(self, stream_type, stream_index: int) -> Optional[stream.Stream]:
+        if stream_type == constants.STREAM_TYPE_AUDIO:
+            _, media_streams, _ = self.__separate_media_streams__()
+        elif stream_type == constants.STREAM_TYPE_SUBTITLE:
+            _, _, media_streams = self.__separate_media_streams__()
+        else:
+            return None
+
+        for media_stream in media_streams:
+            if media_stream.index == stream_index:
+                return media_stream
         return None
 
     def __get_subtitle_extension__(self, codec_name: str) -> str:
@@ -457,26 +502,53 @@ class Movie():
 
         return subtitle_extension
 
-    def extract_subtitle(self, keep_subtitles=False, streams_index: Optional[List[int]] = None):
-        LOG.debug(
-            constants.LOG_FUNCTION_START.format(
-                name = (f'EXTRACT {constants.STREAM_TYPE_SUBTITLE} FROM {constants.STREAM_TYPE_VIDEO}')
-            )
-        )
-        LOG.debug(f'{streams_index = }')
+    def __select_streams_by_type__(
+        self,
+        stream_type: str,
+        streams_index: Optional[List[int]] = None,
+    ) -> Optional[List[stream.Stream]]:
+        if not self.streams:
+            self.analyze_first_video_file()
+        if not self.streams:
+            LOG.warning('There is no analyzed video stream')
+            return None
 
-        subtitle_streams = []
-        for stream_index in streams_index:
-            subtitle_stream = self.__find_subtitle_stream_by_index__(stream_index)
-            if subtitle_stream:
-                subtitle_streams.append(subtitle_stream)
-        LOG.debug(f'{subtitle_streams = }')
+        if streams_index is None:
+            if stream_type == constants.STREAM_TYPE_AUDIO:
+                _, selected_streams, _ = self.__separate_media_streams__()
+            elif stream_type == constants.STREAM_TYPE_SUBTITLE:
+                _, _, selected_streams = self.__separate_media_streams__()
+        else:
+            selected_streams = []
+            for stream_index in streams_index:
+                found_stream = self.__find_and_get_type_stream_by_index(stream_type, stream_index)
+                if found_stream:
+                    selected_streams.append(found_stream)
+        LOG.debug(f'{selected_streams = }')
+
+        if not selected_streams:
+            LOG.warning(f'No {stream_type} streams among the selected stream indexes')
+            return None
+        return selected_streams
+
+    def extract_subtitle_from_video_files(
+            self,
+            streams_index: Optional[List[int]] = None,
+            keep_subtitles: bool = False,
+    ) -> None:
+        LOG.debug(constants.LOG_FUNCTION_START.format(name = 'Extract subtitle from video files'))
+
+        subtitle_streams = self.__select_streams_by_type__(
+            constants.STREAM_TYPE_SUBTITLE,
+            streams_index,
+        )
+        if subtitle_streams is None:
+            return
 
         for f in self.__get_video_files__():
-            filename, file_extension = os.path.splitext(f)
-
-            vid_path_source = os.path.join(self.movies_folder, f)
             LOG.info(f'{f}')
+            filename, file_extension = os.path.splitext(f)
+            vid_path_source = os.path.join(self.movies_folder, f)
 
             for subtitle_stream in subtitle_streams:
                 subtitle_extension = self.__get_subtitle_extension__(subtitle_stream.codec_name)
@@ -508,13 +580,15 @@ class Movie():
                 cmd_exec = [
                     self.ffmpeg_path,
                     '-i', vid_path_source,
-                    '-map', '0', 
+                    '-map', '0',
                     *exclude_subtitle_streams,
                     '-c', 'copy',
                     vid_path_target
                 ]
                 command.execute(cmd_exec)
                 files.restoring_target_filename_to_source(vid_path_target, vid_path_source)
+
+        LOG.debug(constants.LOG_FUNCTION_END.format(name = 'Extract subtitle from video files'))
 
     def __get_file_encoding__(self, file: str) -> Optional[str]:
         with open(file, 'rb') as f:

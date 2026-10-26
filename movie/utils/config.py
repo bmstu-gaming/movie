@@ -53,9 +53,6 @@ def _verification_tool(ffmpeg: str) -> Tuple[bool, str]:
     if not ffmpeg:
         return False, 'not set'
 
-    if not os.path.isfile(ffmpeg):
-        return False, 'file not found'
-
     run_cmd = [ffmpeg, '-version']
     try:
         command.execute(run_cmd)
