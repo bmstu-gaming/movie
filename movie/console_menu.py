@@ -30,7 +30,10 @@ def get_extract_audio_submenu(movie_obj: Movie) -> consolemenu.items.SelectionIt
 
     for audio_type in constants.AUDIO:
         item_extract_audio = consolemenu.items.FunctionItem(
-            f'{audio_type}', scenarios.common_call, args=[movie_obj, Movie.extract_audio_from_video_files, audio_type])
+            f'{audio_type}',
+            scenarios.extract_tracks_to_external_file,
+            args=[movie_obj, constants.STREAM_TYPE_AUDIO, audio_type],
+        )
         extract_audio_submenu.append_item(item_extract_audio)
 
     extract_audio_menu = consolemenu.items.SubmenuItem('Extract audio from video', submenu=extract_audio_submenu)
@@ -67,7 +70,10 @@ def get_subtitle_submenu(movie_obj: Movie) -> consolemenu.items.SelectionItem:
     subtitle_settings_submenu.append_item(item_subtitle_information)
 
     item_subtitle_extract_to_ass = consolemenu.items.FunctionItem(
-        'Extraction', scenarios.subtitle_extract_to_ass, args=[movie_obj])
+        'Extraction',
+        scenarios.extract_tracks_to_external_file,
+        args=[movie_obj, constants.STREAM_TYPE_SUBTITLE],
+    )
     subtitle_settings_submenu.append_item(item_subtitle_extract_to_ass)
 
     item_subtitle_purification = consolemenu.items.FunctionItem(

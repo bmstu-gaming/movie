@@ -111,7 +111,11 @@ q - Quit (quit form menu)
     )
 
 
-def _get_input_streams(pu: consolemenu.PromptUtils, movie_obj: movie.Movie) -> Optional[List[int]]:
+def _get_input_streams(
+        pu: consolemenu.PromptUtils,
+        movie_obj: movie.Movie,
+        stream_type: Optional[List[str]] = None,
+) -> Optional[List[int]]:
     while True:
         raw_input = pu.input('\nEnter stream numbers to save')
         user_input = raw_input.input_string.strip()
@@ -131,7 +135,7 @@ def _get_input_streams(pu: consolemenu.PromptUtils, movie_obj: movie.Movie) -> O
         input_streams = notation.recognition(user_input)
 
         pu.println(f'\nStreams to save: {input_streams}')
-        _display_streams(pu, movie_obj, input_streams)
+        _display_streams(pu, movie_obj, input_streams, stream_type)
         return input_streams
 
 
@@ -259,31 +263,50 @@ def select_and_process_streams_with_language(movie_obj: movie.Movie):
     _function_end(pu)
 
 
-def subtitle_extract_to_ass(movie_obj: movie.Movie):
+def extract_tracks_to_external_file(movie_obj: movie.Movie, stream_type: str, audio_type: Optional[str] = None) -> None:
     pu = consolemenu.PromptUtils(consolemenu.Screen())
-    pu.println(
-        '''
-Extracting subtitle stream to .ass file
-        '''
-    )
+    if stream_type == constants.STREAM_TYPE_SUBTITLE:
+        pu.println(
+            '''
+Extracting subtitle stream to external file
+            '''
+)
+    elif stream_type == constants.STREAM_TYPE_AUDIO:
+        pu.println(
+            f'''
+Extracting audio stream to external {audio_type} file
+            '''
+)
+    else:
+        return
+
     all_videos = movie_obj.__get_video_files__()
     if not all_videos:
         pu.println(f'There is no video file in movie folder: {movie_obj.movies_folder}')
         return
-    movie_obj.analyze_video_file(all_videos[0])
-
-    _display_streams(pu, movie_obj, stream_type=constants.STREAM_TYPE_SUBTITLE)
-    input_streams = _get_input_streams(pu, movie_obj)
+    movie_obj.analyze_first_video_file()
+    _display_streams(pu, movie_obj, stream_type=[stream_type])
+    input_streams = _get_input_streams(pu, movie_obj, [stream_type])
     if input_streams is None:
         return
-    try:
-        if pu.confirm_answer('aa', message='Save subtitle track in video file?'):
-            movie_obj.extract_subtitle(keep_subtitles=True, streams_index=input_streams)
-        else:
-            movie_obj.extract_subtitle(streams_index=input_streams)
-        movie_obj.subs_convert_srt_to_ass()
-    except Exception:
-        LOG.exception('Error while running program')
+
+    if stream_type == constants.STREAM_TYPE_SUBTITLE:
+        try:
+            if pu.confirm_answer('aa', message='Save subtitle track in video file?'):
+                movie_obj.extract_subtitle_from_video_files(streams_index=input_streams, keep_subtitles=True)
+            else:
+                movie_obj.extract_subtitle_from_video_files(streams_index=input_streams)
+            movie_obj.subs_convert_srt_to_ass()
+        except Exception:
+            LOG.exception('Error while running program')
+    elif stream_type == constants.STREAM_TYPE_AUDIO:
+        try:
+            if pu.confirm_answer('aa', message='Save audio track in video file?'):
+                movie_obj.extract_audio_from_video_files(audio_type, streams_index=input_streams, keep_audio=True)
+            else:
+                movie_obj.extract_audio_from_video_files(audio_type, streams_index=input_streams)
+        except Exception:
+            LOG.exception('Error while running program')
 
     _function_end(pu)
 
