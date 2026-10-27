@@ -428,7 +428,7 @@ class Movie():
             sub_path_source = os.path.join(self.movies_folder, f)
             sub_path_target = os.path.join(self.movies_folder, f'{filename}.ass')
 
-            subs = pysubs2.load(sub_path_source, encoding='utf-8')
+            subs = pysubs2.load(sub_path_source, encoding=self.__get_file_encoding__(sub_path_source))
             subs.save(sub_path_target, encoding='utf-8')
             sub_srt_path = os.path.join(self.movies_folder, filename + file_extension)
 
